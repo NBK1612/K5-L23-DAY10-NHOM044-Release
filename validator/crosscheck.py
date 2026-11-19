@@ -6,15 +6,15 @@ Pha 2.1:
   - Mỗi box ghép với segment thing có bbox gần nhất (IoU). Bỏ segment iscrowd.
   - Tính tỉ lệ pixel của segment nằm trong box detection.
 
-Pha 2.2 & 2.3:
-  - Đánh dấu 4 loại dấu hiệu ứng viên lỗi gán nhãn:
-    + class_swap (hoặc category_swap): Box và segment trùng vị trí nhưng khác lớp.
-    + bbox_drift: Nhiều pixel của segment rơi ra ngoài box cùng lớp (box lệch).
-    + missing_box: Segment thing lớn không có box detection nào.
-    + instance_merge: Một segment phủ lên 2 box detection cùng lớp.
-  - Bộ ngưỡng chốt sau khi đo trên lô sạch runs/clean (0 ứng viên) và r44007 (11 ứng viên).
-  - Sinh candidates.json qua cờ --candidates.
-  - Loại trừ các ảnh đã có lỗi luật (để hàng đợi xem ảnh ngắn gọn).
+Pha 2.2 & 2.3 (Cập nhật nới ngưỡng theo phản hồi Pha 2.6):
+  - Bắt trọn 4 loại dấu hiệu ứng viên lỗi gán nhãn:
+    + class_swap (hoặc category_swap): Box và segment trùng vị trí (IoU >= 0.30) nhưng khác lớp.
+    + bbox_drift: Box và segment cùng lớp nhưng pixel_ratio < 0.82 hoặc IoU < 0.65 (box bị trôi lệch).
+    + missing_box: Segment thing đáng kể (area >= 600 px, >= 0.4% ảnh) không có box detection (IoU < 0.20).
+    + instance_merge: Một segment thing phủ lên 2 box detection riêng biệt cùng lớp (sum ratio >= 0.70).
+  - Không che giấu các dấu hiệu khác nhau trong cùng một ảnh (giữ các loại ứng viên độc lập).
+  - Quy mô hàng đợi: ~25–35 ứng viên trên seed luyện tập r44007 (5 người xem kịp trong 10–15 phút),
+    lô sạch clean chỉ ra ~3 ứng viên nhiễu tự nhiên COCO.
 
 Chỉ đọc thư mục delivery; chỉ dùng thư viện chuẩn + scripts/pngutil.py.
 Không giả định tên ảnh cố định (dùng manifest.json làm cầu nối).
@@ -33,31 +33,35 @@ import pngutil  # noqa: E402
 
 
 # ==============================================================================
-# BỘ NGƯỠNG ĐỐI CHIẾU & SINH ỨNG VIÊN (Pha 2.3)
+# BỘ NGƯỠNG ĐỐI CHIẾU & SINH ỨNG VIÊN (Pha 2.3 - Đã nới ngưỡng theo Pha 2.6)
 # Đã đo kiểm chứng trên:
-#   - runs/clean   (50 ảnh sạch): 0 ứng viên (không bị báo nhầm nhiễu tự nhiên COCO)
-#   - runs/r44007 (250 ảnh seed): 11 ứng viên (hàng đợi vừa vặn cho 5 người xem)
-#   - runs/r42    (250 ảnh test): 13 ứng viên
+#   - runs/clean   (50 ảnh sạch): 3 ứng viên nhiễu tự nhiên (chấp nhận được theo yêu cầu)
+#   - runs/r44007 (250 ảnh seed): 26 ứng viên / 24 ảnh (hàng đợi vừa vặn 25–40 ảnh)
+#   - runs/r42    (250 ảnh test): 32 ứng viên / 29 ảnh
 # ==============================================================================
 
 # 1. Ngưỡng class_swap / category_swap:
-MIN_IOU_CLASS_SWAP = 0.35          # IoU tối thiểu giữa box và segment khác lớp để coi là trùng vị trí
-MIN_SEG_AREA_CLASS_SWAP = 400      # Diện tích segment tối thiểu (px) để tránh nhiễu li ti
-MIN_REL_AREA_BOX = 0.003           # Tỉ lệ diện tích box tối thiểu so với ảnh (0.3%)
+MIN_IOU_CLASS_SWAP = 0.30          # Nới từ 0.35 xuống 0.30 để bắt các ca góc nghiêng/che khuất
+MIN_SEG_AREA_CLASS_SWAP = 200      # Hạ từ 400 xuống 200 px để bắt vật nhỏ (vd: ly rượu 272 px)
+MIN_REL_AREA_BOX_SWAP = 0.002      # Box chiếm >= 0.2% ảnh
 
 # 2. Ngưỡng bbox_drift:
-MAX_PIXEL_RATIO_DRIFT = 0.70       # Tỉ lệ pixel segment nằm trong box < 0.70 (lô sạch luôn >= 0.728)
-MIN_SEG_AREA_DRIFT = 600           # Segment phải đủ lớn (>= 600 px)
-MIN_IOU_DRIFT_PAIR = 0.05          # Phải có giao nhau tối thiểu để xác định đúng cặp vật
+MAX_PIXEL_RATIO_DRIFT = 0.82       # Nâng từ 0.70 lên 0.82 để bắt các ca drift nhẹ (~12% box size)
+MIN_SEG_AREA_DRIFT = 200           # Hạ từ 600 xuống 200 px để bắt vật vừa/nhỏ (vd: xe buýt 234 px)
+MIN_IOU_DRIFT_PAIR = 0.05          # Giao nhau tối thiểu xác định đúng cặp vật cùng lớp
+MAX_IOU_DRIFT_WARN = 0.65          # IoU cùng lớp < 0.65 cũng là dấu hiệu box bị lệch khỏi vật
 
 # 3. Ngưỡng missing_box:
-MAX_IOU_UNMATCHED = 0.20           # Segment coi là chưa có box nếu không box nào đạt IoU >= 0.20
-MIN_SEG_AREA_MISSING = 1200        # Segment thing phải có diện tích >= 1200 px
-MIN_REL_AREA_MISSING = 0.008       # Chiếm ít nhất 0.8% diện tích toàn ảnh
+MAX_IOU_UNMATCHED_MISSING = 0.20   # Segment không có box nào đạt IoU >= 0.20
+MIN_SEG_AREA_MISSING = 600         # Hạ từ 1200 xuống 600 px
+MIN_REL_AREA_MISSING = 0.004       # Chiếm ít nhất 0.4% diện tích toàn ảnh
 
 # 4. Ngưỡng instance_merge:
-MIN_PIXEL_INSIDE_MERGE = 250       # Mỗi box cùng lớp phải chứa ít nhất 250 px của segment
-MAX_IOU_BETWEEN_BOXES_MERGE = 0.50 # Hai box không trùng nhau (tránh nhầm với duplicate_box)
+MIN_INSIDE_MERGE = 350             # Mỗi box cùng lớp phải chứa ít nhất 350 px của segment
+MIN_RATIO_MERGE = 0.15             # Mỗi box chiếm ít nhất 15% diện tích segment merged
+MAX_RATIO_MERGE = 0.85             # Không box nào chiếm trọn toàn bộ segment (> 85%)
+MAX_BOX_IOU_MERGE = 0.40           # Hai box không trùng nhau (tránh nhầm với duplicate_box)
+MIN_SUM_RATIO_MERGE = 0.70         # Tổng pixel 2 box chiếm >= 70% segment merged
 
 
 def load_classes(delivery: Path) -> dict[int, str]:
@@ -224,7 +228,7 @@ def match_image(
 ) -> dict:
     """Đối chiếu một ảnh giữa detection và panoptic.
 
-    Trả về dict chứa danh sách các cặp matched, unmatched boxes, unmatched segments.
+    Trả về dict chứa danh sách các cặp matched, unmatched boxes, thing segments.
     """
     img_file = Path(item["image"]).name
     img_w, img_h = img_sizes.get(img_file, (640, 480))
@@ -328,15 +332,15 @@ def match_image(
 
 
 def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> list[dict]:
-    """Pha 2.2 & 2.3: Sinh danh sách ứng viên nghi ngờ lỗi gán nhãn theo bộ ngưỡng đã chốt.
+    """Pha 2.2 & 2.3: Sinh danh sách ứng viên nghi ngờ lỗi gán nhãn theo bộ ngưỡng đã tinh chỉnh.
 
-    Bộ ngưỡng:
-      - class_swap: IoU >= MIN_IOU_CLASS_SWAP (0.35), diện tích segment >= 400 px.
-      - bbox_drift: pixel_ratio < MAX_PIXEL_RATIO_DRIFT (0.70), diện tích segment >= 600 px.
-      - missing_box: area >= MIN_SEG_AREA_MISSING (1200 px) & >= 0.8% ảnh, IoU < 0.20.
-      - instance_merge: 1 segment phủ lên 2 box cùng lớp, mỗi box >= 250 px bên trong.
+    Bộ ngưỡng mới:
+      - class_swap: IoU >= 0.30, diện tích segment >= 200 px hoặc box >= 0.2% ảnh.
+      - bbox_drift: pixel_ratio < 0.82 hoặc IoU < 0.65 (vật >= 200 px).
+      - missing_box: area >= 600 px & >= 0.4% ảnh, IoU < 0.20.
+      - instance_merge: 1 segment phủ lên 2 box riêng biệt cùng lớp (mỗi box >= 350 px, sum >= 70%).
 
-    Bỏ qua ảnh đã có lỗi luật (mỗi ảnh chỉ 1 lỗi).
+    Bỏ qua ảnh đã có lỗi luật (mỗi ảnh chỉ 1 lỗi). Giữ các dấu hiệu độc lập trong cùng ảnh.
     """
     delivery = Path(delivery).resolve()
     manifest_path = delivery / "manifest.json"
@@ -390,7 +394,7 @@ def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> li
                 d_w = d["pixel_box"][2] - d["pixel_box"][0]
                 d_h = d["pixel_box"][3] - d["pixel_box"][1]
                 d_area = d_w * d_h
-                if (d_area / img_area >= MIN_REL_AREA_BOX) or (s["area"] >= MIN_SEG_AREA_CLASS_SWAP):
+                if (d_area / img_area >= MIN_REL_AREA_BOX_SWAP) or (s["area"] >= MIN_SEG_AREA_CLASS_SWAP):
                     img_candidates.append({
                         "image": image_name,
                         "type": "class_swap",
@@ -406,7 +410,7 @@ def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> li
             d = m["det_box"]
             s = m["segment"]
             if s and m["same_class"] and m["iou"] >= MIN_IOU_DRIFT_PAIR:
-                if m["pixel_ratio"] < MAX_PIXEL_RATIO_DRIFT and s["area"] >= MIN_SEG_AREA_DRIFT:
+                if (m["pixel_ratio"] < MAX_PIXEL_RATIO_DRIFT or m["iou"] < MAX_IOU_DRIFT_WARN) and s["area"] >= MIN_SEG_AREA_DRIFT:
                     img_candidates.append({
                         "image": image_name,
                         "type": "bbox_drift",
@@ -414,11 +418,11 @@ def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> li
                         "class_pan": s["class_name"],
                         "iou": round(m["iou"], 3),
                         "pixel_ratio": round(m["pixel_ratio"], 3),
-                        "reason": f"Box [{d['class_name']}] lệch khỏi segment: pixel_ratio={m['pixel_ratio']:.2f} ({m['pixel_inside']}/{m['pixel_total']} px)",
+                        "reason": f"Box [{d['class_name']}] lệch khỏi segment: pixel_ratio={m['pixel_ratio']:.2f} ({m['pixel_inside']}/{m['pixel_total']} px, IoU={m['iou']:.2f})",
                     })
 
         # 3. Dấu hiệu missing_box:
-        matched_seg_ids = {m["segment"]["id"] for m in res["matches"] if m["segment"] and m["iou"] >= MAX_IOU_UNMATCHED}
+        matched_seg_ids = {m["segment"]["id"] for m in res["matches"] if m["segment"] and m["iou"] >= MAX_IOU_UNMATCHED_MISSING}
         for s in res["thing_segments"]:
             if s["id"] not in matched_seg_ids:
                 if s["area"] >= MIN_SEG_AREA_MISSING and (s["area"] / img_area >= MIN_REL_AREA_MISSING):
@@ -433,33 +437,41 @@ def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> li
                     })
 
         # 4. Dấu hiệu instance_merge:
-        seg_to_matches: dict[int, list[dict]] = {}
-        for m in res["matches"]:
-            if m["segment"]:
-                seg_to_matches.setdefault(m["segment"]["id"], []).append(m)
+        mask_path = delivery / item["mask"]
+        mw, mh, px = pngutil.read_rgb(mask_path)
+        for s in res["thing_segments"]:
+            same_boxes = [d for d in res["det_boxes"] if d["class_name"] == s["class_name"]]
+            if len(same_boxes) >= 2:
+                box_ins = []
+                for d in same_boxes:
+                    tot, ins, r = compute_segment_pixel_ratio(px, mw * 3, s["id"], s["raw_bbox"], d["pixel_box"])
+                    if ins >= MIN_INSIDE_MERGE and (MIN_RATIO_MERGE <= ins / s["area"] <= MAX_RATIO_MERGE):
+                        box_ins.append((d, ins, ins / s["area"]))
+                if len(box_ins) >= 2:
+                    for i in range(len(box_ins)):
+                        for j in range(i + 1, len(box_ins)):
+                            b1, b2 = box_ins[i][0]["pixel_box"], box_ins[j][0]["pixel_box"]
+                            if compute_box_iou(b1, b2) <= MAX_BOX_IOU_MERGE:
+                                sum_ratio = (box_ins[i][1] + box_ins[j][1]) / s["area"]
+                                if sum_ratio >= MIN_SUM_RATIO_MERGE:
+                                    img_candidates.append({
+                                        "image": image_name,
+                                        "type": "instance_merge",
+                                        "class_det": s["class_name"],
+                                        "class_pan": s["class_name"],
+                                        "iou": round(compute_box_iou(box_ins[i][0]["pixel_box"], s["pixel_box"]), 3),
+                                        "pixel_ratio": round(box_ins[i][2], 3),
+                                        "reason": f"Segment [{s['class_name']}] (area={s['area']}) phủ lên 2 box riêng biệt ({box_ins[i][1]} px và {box_ins[j][1]} px)",
+                                    })
 
-        for sid, mlist in seg_to_matches.items():
-            if len(mlist) >= 2:
-                s = mlist[0]["segment"]
-                same_cls = [m for m in mlist if m["det_box"]["class_name"] == s["class_name"] and m["pixel_inside"] >= MIN_PIXEL_INSIDE_MERGE]
-                if len(same_cls) >= 2:
-                    b1 = same_cls[0]["det_box"]["pixel_box"]
-                    b2 = same_cls[1]["det_box"]["pixel_box"]
-                    if compute_box_iou(b1, b2) < MAX_IOU_BETWEEN_BOXES_MERGE:
-                        img_candidates.append({
-                            "image": image_name,
-                            "type": "instance_merge",
-                            "class_det": s["class_name"],
-                            "class_pan": s["class_name"],
-                            "iou": round(same_cls[0]["iou"], 3),
-                            "pixel_ratio": round(same_cls[0]["pixel_ratio"], 3),
-                            "reason": f"Segment [{s['class_name']}] phủ lên {len(same_cls)} box detection riêng biệt",
-                        })
-
+        # Giữ các loại ứng viên độc lập trong cùng một ảnh (không để class_swap che bbox_drift/instance_merge)
         if img_candidates:
-            type_prio = {"class_swap": 0, "bbox_drift": 1, "missing_box": 2, "instance_merge": 3}
-            img_candidates.sort(key=lambda c: type_prio.get(c["type"], 9))
-            candidates.append(img_candidates[0])
+            seen_types = set()
+            for c in img_candidates:
+                t = c["type"]
+                if t not in seen_types:
+                    seen_types.add(t)
+                    candidates.append(c)
 
     return candidates
 
