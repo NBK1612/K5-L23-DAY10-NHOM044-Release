@@ -9,12 +9,12 @@ Pha 2.1:
 Pha 2.2 & 2.3 (Cập nhật nới ngưỡng theo phản hồi Pha 2.6):
   - Bắt trọn 4 loại dấu hiệu ứng viên lỗi gán nhãn:
     + class_swap (hoặc category_swap): Box và segment trùng vị trí (IoU >= 0.30) nhưng khác lớp.
-    + bbox_drift: Box và segment cùng lớp nhưng pixel_ratio < 0.82 hoặc IoU < 0.65 (box bị trôi lệch).
+    + bbox_drift: Box ghép với segment CÙNG LỚP và bị tịnh tiến >= 8% kích thước vật (>= 4 px, segment >= 500 px).
     + missing_box: Segment thing đáng kể (area >= 600 px, >= 0.4% ảnh) không có box detection (IoU < 0.20).
     + instance_merge: Một segment thing phủ lên 2 box detection riêng biệt cùng lớp (sum ratio >= 0.70).
   - Không che giấu các dấu hiệu khác nhau trong cùng một ảnh (giữ các loại ứng viên độc lập).
-  - Quy mô hàng đợi: ~25–35 ứng viên trên seed luyện tập r44007 (5 người xem kịp trong 10–15 phút),
-    lô sạch clean chỉ ra ~3 ứng viên nhiễu tự nhiên COCO.
+  - Quy mô hàng đợi: ~28–31 ứng viên trên r44007 / r777 (5 người xem kịp trong 10–15 phút),
+    lô sạch clean chỉ ra 3 ứng viên nhiễu tự nhiên COCO.
 
 Chỉ đọc thư mục delivery; chỉ dùng thư viện chuẩn + scripts/pngutil.py.
 Không giả định tên ảnh cố định (dùng manifest.json làm cầu nối).
@@ -33,11 +33,13 @@ import pngutil  # noqa: E402
 
 
 # ==============================================================================
-# BỘ NGƯỠNG ĐỐI CHIẾU & SINH ỨNG VIÊN (Pha 2.3 - Đã nới ngưỡng theo Pha 2.6)
-# Đã đo kiểm chứng trên:
-#   - runs/clean   (50 ảnh sạch): 3 ứng viên nhiễu tự nhiên (chấp nhận được theo yêu cầu)
-#   - runs/r44007 (250 ảnh seed): 26 ứng viên / 24 ảnh (hàng đợi vừa vặn 25–40 ảnh)
-#   - runs/r42    (250 ảnh test): 32 ứng viên / 29 ảnh
+# BỘ NGƯỠNG ĐỐI CHIẾU & SINH ỨNG VIÊN (vòng 3: sửa ghép bbox_drift theo cùng lớp)
+# Đo lại sau khi sửa (validate.py --candidates):
+#   - runs/clean  (50 ảnh sạch, seed 5 --no-faults): 3 ứng viên / 3 ảnh (đều instance_merge, 0 bbox_drift)
+#   - runs/r44007 (250 ảnh seed nhóm): 28 ứng viên / 27 ảnh
+#       (class_swap 8, bbox_drift 3, missing_box 4, instance_merge 13; trước khi sửa: bbox_drift 1)
+#   - runs/r777   (250 ảnh, seed khác để kiểm không khớp riêng một lô): 31 ứng viên / 28 ảnh
+#       (class_swap 9, bbox_drift 1, missing_box 5, instance_merge 16)
 # ==============================================================================
 
 # 1. Ngưỡng class_swap / category_swap:
@@ -45,11 +47,19 @@ MIN_IOU_CLASS_SWAP = 0.30          # Nới từ 0.35 xuống 0.30 để bắt c�
 MIN_SEG_AREA_CLASS_SWAP = 200      # Hạ từ 400 xuống 200 px để bắt vật nhỏ (vd: ly rượu 272 px)
 MIN_REL_AREA_BOX_SWAP = 0.002      # Box chiếm >= 0.2% ảnh
 
-# 2. Ngưỡng bbox_drift:
-MAX_PIXEL_RATIO_DRIFT = 0.82       # Nâng từ 0.70 lên 0.82 để bắt các ca drift nhẹ (~12% box size)
-MIN_SEG_AREA_DRIFT = 200           # Hạ từ 600 xuống 200 px để bắt vật vừa/nhỏ (vd: xe buýt 234 px)
-MIN_IOU_DRIFT_PAIR = 0.05          # Giao nhau tối thiểu xác định đúng cặp vật cùng lớp
-MAX_IOU_DRIFT_WARN = 0.65          # IoU cùng lớp < 0.65 cũng là dấu hiệu box bị lệch khỏi vật
+# 2. Ngưỡng bbox_drift (vòng 3): ghép box với segment CÙNG LỚP, đo độ TỊNH TIẾN.
+#   Box bị trôi thì hai cạnh đối diện dịch cùng một chiều (trái+phải hoặc trên+dưới).
+#   Lệch tự nhiên của COCO thì cạnh co/giãn lẫn lộn, không tịnh tiến.
+#   Số đo (shift = độ dịch nhỏ hơn của 2 cạnh / kích thước segment):
+#     - runs/clean (50 ảnh sạch): shift lớn nhất 0.057 với segment >= 200 px; vật < 100 px
+#       dịch tới ~0.07–0.15 chỉ vì làm tròn pixel nên phải loại vật nhỏ.
+#     - r44007 / r777: các box vật lớn dịch 0.09–0.55, tách hẳn khỏi nhiễu tự nhiên.
+#   Ngưỡng 0.08 cách nhiễu sạch (0.057) một khoảng an toàn.
+MIN_IOU_DRIFT_PAIR = 0.05          # Box phải giao segment cùng lớp ít nhất chút ít mới coi là một cặp
+MIN_SHIFT_DRIFT = 0.08             # Tịnh tiến >= 8% kích thước vật
+MIN_SHIFT_PX_DRIFT = 4.0           # và >= 4 px (tránh sai số làm tròn ở vật nhỏ)
+MIN_SEG_AREA_DRIFT = 500           # Segment >= 500 px (vật nhỏ hơn nhiễu làm tròn quá lớn)
+MAX_OTHER_CLASS_IOU_DRIFT = 0.50   # Box trùng một segment khác lớp (IoU >= 0.5, cao hơn cùng lớp) -> để class_swap xử lý
 
 # 3. Ngưỡng missing_box:
 MAX_IOU_UNMATCHED_MISSING = 0.20   # Segment không có box nào đạt IoU >= 0.20
@@ -142,6 +152,34 @@ def compute_box_iou(box1: tuple[float, float, float, float], box2: tuple[float, 
     if union <= 0.0:
         return 0.0
     return inter / union
+
+
+def compute_box_shift(
+    det_box: tuple[float, float, float, float],
+    seg_box: tuple[float, float, float, float],
+) -> tuple[float, float]:
+    """Đo độ tịnh tiến của box detection so với bbox segment.
+
+    Theo mỗi trục, nếu hai cạnh đối diện dịch CÙNG chiều thì độ tịnh tiến là
+    độ dịch nhỏ hơn của hai cạnh; nếu dịch ngược chiều (box co/giãn) thì bằng 0.
+    Box nằm gọn trong một segment gộp nhiều vật sẽ có shift = 0 nên không lẫn
+    với instance_merge.
+
+    Returns:
+      (shift tương đối lớn nhất của 2 trục (theo kích thước segment), shift tính bằng pixel).
+    """
+    seg_w = max(seg_box[2] - seg_box[0], 1.0)
+    seg_h = max(seg_box[3] - seg_box[1], 1.0)
+    best_rel, best_px = 0.0, 0.0
+    for a1, a2, size in (
+        (det_box[0] - seg_box[0], det_box[2] - seg_box[2], seg_w),
+        (det_box[1] - seg_box[1], det_box[3] - seg_box[3], seg_h),
+    ):
+        if a1 * a2 > 0:
+            px = min(abs(a1), abs(a2))
+            if px / size > best_rel:
+                best_rel, best_px = px / size, px
+    return best_rel, best_px
 
 
 def compute_segment_pixel_ratio(
@@ -336,7 +374,7 @@ def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> li
 
     Bộ ngưỡng mới:
       - class_swap: IoU >= 0.30, diện tích segment >= 200 px hoặc box >= 0.2% ảnh.
-      - bbox_drift: pixel_ratio < 0.82 hoặc IoU < 0.65 (vật >= 200 px).
+      - bbox_drift: ghép theo cùng lớp, box tịnh tiến >= 8% và >= 4 px (segment >= 500 px).
       - missing_box: area >= 600 px & >= 0.4% ảnh, IoU < 0.20.
       - instance_merge: 1 segment phủ lên 2 box riêng biệt cùng lớp (mỗi box >= 350 px, sum >= 70%).
 
@@ -406,20 +444,43 @@ def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> li
                     })
 
         # 2. Dấu hiệu bbox_drift:
-        for m in res["matches"]:
-            d = m["det_box"]
-            s = m["segment"]
-            if s and m["same_class"] and m["iou"] >= MIN_IOU_DRIFT_PAIR:
-                if (m["pixel_ratio"] < MAX_PIXEL_RATIO_DRIFT or m["iou"] < MAX_IOU_DRIFT_WARN) and s["area"] >= MIN_SEG_AREA_DRIFT:
-                    img_candidates.append({
-                        "image": image_name,
-                        "type": "bbox_drift",
-                        "class_det": d["class_name"],
-                        "class_pan": s["class_name"],
-                        "iou": round(m["iou"], 3),
-                        "pixel_ratio": round(m["pixel_ratio"], 3),
-                        "reason": f"Box [{d['class_name']}] lệch khỏi segment: pixel_ratio={m['pixel_ratio']:.2f} ({m['pixel_inside']}/{m['pixel_total']} px, IoU={m['iou']:.2f})",
-                    })
+        #   Ghép box với segment CÙNG LỚP có IoU cao nhất (không dùng cặp ghép theo mọi lớp
+        #   ở trên: box bị trôi thường gần vật khác lớp hơn, khi đó same_class=False và
+        #   drift bị bỏ sót). Ứng viên khi box tịnh tiến rõ so với bbox segment.
+        mask_path = delivery / item["mask"]
+        mw, mh, px = pngutil.read_rgb(mask_path)
+        for d in res["det_boxes"]:
+            same_segs = [s for s in res["thing_segments"] if s["class_name"] == d["class_name"]]
+            if not same_segs:
+                continue
+            s = max(same_segs, key=lambda seg: compute_box_iou(d["pixel_box"], seg["pixel_box"]))
+            iou = compute_box_iou(d["pixel_box"], s["pixel_box"])
+            if iou < MIN_IOU_DRIFT_PAIR or s["area"] < MIN_SEG_AREA_DRIFT:
+                continue
+            # Box khớp gần trọn một segment KHÁC lớp (vd: motorcycle trùng bicycle IoU 0.98) là
+            # dấu hiệu class_swap; segment cùng lớp gần đó chỉ là vật bên cạnh, không phải drift.
+            other_iou = max(
+                (compute_box_iou(d["pixel_box"], o["pixel_box"])
+                 for o in res["thing_segments"] if o["class_name"] != d["class_name"]),
+                default=0.0,
+            )
+            if other_iou >= MAX_OTHER_CLASS_IOU_DRIFT and other_iou > iou:
+                continue
+            shift_rel, shift_px = compute_box_shift(d["pixel_box"], s["pixel_box"])
+            if shift_rel >= MIN_SHIFT_DRIFT and shift_px >= MIN_SHIFT_PX_DRIFT:
+                tot, ins, ratio = compute_segment_pixel_ratio(px, mw * 3, s["id"], s["raw_bbox"], d["pixel_box"])
+                img_candidates.append({
+                    "image": image_name,
+                    "type": "bbox_drift",
+                    "class_det": d["class_name"],
+                    "class_pan": s["class_name"],
+                    "iou": round(iou, 3),
+                    "pixel_ratio": round(ratio, 3),
+                    "reason": (
+                        f"Box [{d['class_name']}] tịnh tiến {shift_rel*100:.0f}% ({shift_px:.0f} px) so với segment, "
+                        f"IoU={iou:.2f}, pixel_ratio={ratio:.2f} ({ins}/{tot} px)"
+                    ),
+                })
 
         # 3. Dấu hiệu missing_box:
         matched_seg_ids = {m["segment"]["id"] for m in res["matches"] if m["segment"] and m["iou"] >= MAX_IOU_UNMATCHED_MISSING}
@@ -436,9 +497,7 @@ def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> li
                         "reason": f"Segment thing [{s['class_name']}] ({s['area']} px, {s['area']/img_area*100:.1f}% ảnh) không có box detection",
                     })
 
-        # 4. Dấu hiệu instance_merge:
-        mask_path = delivery / item["mask"]
-        mw, mh, px = pngutil.read_rgb(mask_path)
+        # 4. Dấu hiệu instance_merge (dùng lại mask đã đọc ở bước 2):
         for s in res["thing_segments"]:
             same_boxes = [d for d in res["det_boxes"] if d["class_name"] == s["class_name"]]
             if len(same_boxes) >= 2:
