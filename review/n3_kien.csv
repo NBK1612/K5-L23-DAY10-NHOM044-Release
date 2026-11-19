@@ -1,3 +1,7 @@
 image,type,verdict,note
 000000009914,class_swap,confirmed,"Kiên: đĩa thức ăn gồm burger rắc vừng cắt đôi và khoai tây; nửa bánh bên phải là sandwich, nhãn detection ghi hot dog là sai, panoptic ghi sandwich đúng"
 000000000872,missing_box,confirmed,"Kiên: ảnh trận bóng chày có 2 người (vận động viên ném bóng áo xanh và người chạy áo trắng đội mũ), nhãn detection bị thiếu mất box cho người chạy áo trắng; panoptic có đủ 2 person"
+000000005992,instance_merge,rejected,"Kiên: vùng nghi ngờ chỉ là một con cừu ở hàng sau bị con cừu to phía trước che khuất phần thân; segment rơi vào hai box do hai box cừu chồng lấn tự nhiên, không phải gộp hai con cừu"
+000000017959,instance_merge,rejected,"Kiên: lễ hội thả diều có nhiều con diều hình cá và các dải đuôi dài chồng chéo phức tạp trên bầu trời; dải đuôi diều đan xen bị che khuất tự nhiên, không phải hai con diều bị gộp"
+000000018380,class_swap,rejected,"Kiên: vật thật là chiếc cốc nhựa màu xanh hình trụ không chân đế trên bàn ăn; panoptic ghi wine glass còn detection ghi cup là do bất đồng chủ quan trong nhãn gốc COCO, không phải lỗi gài"
+000000018380,instance_merge,rejected,"Kiên: bàn tiệc đông người, bé gái ngồi phía trước che khuất thân người đàn ông áo tím ngồi phía sau; hai người có hai box riêng, segment chỉ chạm do che khuất tự nhiên trong đám đông"
