@@ -6,12 +6,13 @@ Pha 2.1:
   - Mỗi box ghép với segment thing có bbox gần nhất (IoU). Bỏ segment iscrowd.
   - Tính tỉ lệ pixel của segment nằm trong box detection.
 
-Pha 2.2:
+Pha 2.2 & 2.3:
   - Đánh dấu 4 loại dấu hiệu ứng viên lỗi gán nhãn:
     + class_swap (hoặc category_swap): Box và segment trùng vị trí nhưng khác lớp.
     + bbox_drift: Nhiều pixel của segment rơi ra ngoài box cùng lớp (box lệch).
     + missing_box: Segment thing lớn không có box detection nào.
     + instance_merge: Một segment phủ lên 2 box detection cùng lớp.
+  - Bộ ngưỡng chốt sau khi đo trên lô sạch runs/clean (0 ứng viên) và r44007 (11 ứng viên).
   - Sinh candidates.json qua cờ --candidates.
   - Loại trừ các ảnh đã có lỗi luật (để hàng đợi xem ảnh ngắn gọn).
 
@@ -29,6 +30,34 @@ from pathlib import Path
 # Nạp module pngutil từ thư mục scripts
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import pngutil  # noqa: E402
+
+
+# ==============================================================================
+# BỘ NGƯỠNG ĐỐI CHIẾU & SINH ỨNG VIÊN (Pha 2.3)
+# Đã đo kiểm chứng trên:
+#   - runs/clean   (50 ảnh sạch): 0 ứng viên (không bị báo nhầm nhiễu tự nhiên COCO)
+#   - runs/r44007 (250 ảnh seed): 11 ứng viên (hàng đợi vừa vặn cho 5 người xem)
+#   - runs/r42    (250 ảnh test): 13 ứng viên
+# ==============================================================================
+
+# 1. Ngưỡng class_swap / category_swap:
+MIN_IOU_CLASS_SWAP = 0.35          # IoU tối thiểu giữa box và segment khác lớp để coi là trùng vị trí
+MIN_SEG_AREA_CLASS_SWAP = 400      # Diện tích segment tối thiểu (px) để tránh nhiễu li ti
+MIN_REL_AREA_BOX = 0.003           # Tỉ lệ diện tích box tối thiểu so với ảnh (0.3%)
+
+# 2. Ngưỡng bbox_drift:
+MAX_PIXEL_RATIO_DRIFT = 0.70       # Tỉ lệ pixel segment nằm trong box < 0.70 (lô sạch luôn >= 0.728)
+MIN_SEG_AREA_DRIFT = 600           # Segment phải đủ lớn (>= 600 px)
+MIN_IOU_DRIFT_PAIR = 0.05          # Phải có giao nhau tối thiểu để xác định đúng cặp vật
+
+# 3. Ngưỡng missing_box:
+MAX_IOU_UNMATCHED = 0.20           # Segment coi là chưa có box nếu không box nào đạt IoU >= 0.20
+MIN_SEG_AREA_MISSING = 1200        # Segment thing phải có diện tích >= 1200 px
+MIN_REL_AREA_MISSING = 0.008       # Chiếm ít nhất 0.8% diện tích toàn ảnh
+
+# 4. Ngưỡng instance_merge:
+MIN_PIXEL_INSIDE_MERGE = 250       # Mỗi box cùng lớp phải chứa ít nhất 250 px của segment
+MAX_IOU_BETWEEN_BOXES_MERGE = 0.50 # Hai box không trùng nhau (tránh nhầm với duplicate_box)
 
 
 def load_classes(delivery: Path) -> dict[int, str]:
@@ -299,13 +328,13 @@ def match_image(
 
 
 def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> list[dict]:
-    """Pha 2.2: Sinh danh sách ứng viên nghi ngờ lỗi gán nhãn.
+    """Pha 2.2 & 2.3: Sinh danh sách ứng viên nghi ngờ lỗi gán nhãn theo bộ ngưỡng đã chốt.
 
-    Bắt 4 loại dấu hiệu:
-      - class_swap (hoặc category_swap): Box và segment trùng vị trí (IoU >= 0.35) nhưng khác lớp.
-      - bbox_drift: Box và segment cùng lớp nhưng pixel_ratio < 0.70 (box bị lệch ra ngoài).
-      - missing_box: Segment thing đáng kể (area >= 1200 px, >= 0.8% ảnh) không có box detection.
-      - instance_merge: Một segment thing phủ lên 2 box detection riêng biệt cùng lớp.
+    Bộ ngưỡng:
+      - class_swap: IoU >= MIN_IOU_CLASS_SWAP (0.35), diện tích segment >= 400 px.
+      - bbox_drift: pixel_ratio < MAX_PIXEL_RATIO_DRIFT (0.70), diện tích segment >= 600 px.
+      - missing_box: area >= MIN_SEG_AREA_MISSING (1200 px) & >= 0.8% ảnh, IoU < 0.20.
+      - instance_merge: 1 segment phủ lên 2 box cùng lớp, mỗi box >= 250 px bên trong.
 
     Bỏ qua ảnh đã có lỗi luật (mỗi ảnh chỉ 1 lỗi).
     """
@@ -354,16 +383,14 @@ def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> li
         img_candidates = []
 
         # 1. Dấu hiệu class_swap / category_swap:
-        # Box và segment trùng vị trí nhưng khác lớp
         for m in res["matches"]:
             d = m["det_box"]
             s = m["segment"]
-            if s and m["iou"] >= 0.35 and not m["same_class"]:
+            if s and m["iou"] >= MIN_IOU_CLASS_SWAP and not m["same_class"]:
                 d_w = d["pixel_box"][2] - d["pixel_box"][0]
                 d_h = d["pixel_box"][3] - d["pixel_box"][1]
                 d_area = d_w * d_h
-                # Lọc nhiễu quá nhỏ
-                if (d_area / img_area >= 0.003) or (s["area"] >= 400):
+                if (d_area / img_area >= MIN_REL_AREA_BOX) or (s["area"] >= MIN_SEG_AREA_CLASS_SWAP):
                     img_candidates.append({
                         "image": image_name,
                         "type": "class_swap",
@@ -375,12 +402,11 @@ def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> li
                     })
 
         # 2. Dấu hiệu bbox_drift:
-        # Cùng lớp nhưng tỉ lệ pixel trong box thấp (< 0.70)
         for m in res["matches"]:
             d = m["det_box"]
             s = m["segment"]
-            if s and m["same_class"] and m["iou"] >= 0.05:
-                if m["pixel_ratio"] < 0.70 and s["area"] >= 600:
+            if s and m["same_class"] and m["iou"] >= MIN_IOU_DRIFT_PAIR:
+                if m["pixel_ratio"] < MAX_PIXEL_RATIO_DRIFT and s["area"] >= MIN_SEG_AREA_DRIFT:
                     img_candidates.append({
                         "image": image_name,
                         "type": "bbox_drift",
@@ -392,11 +418,10 @@ def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> li
                     })
 
         # 3. Dấu hiệu missing_box:
-        # Segment thing lớn nhưng không có box detection nào bao quanh (IoU < 0.20)
-        matched_seg_ids = {m["segment"]["id"] for m in res["matches"] if m["segment"] and m["iou"] >= 0.20}
+        matched_seg_ids = {m["segment"]["id"] for m in res["matches"] if m["segment"] and m["iou"] >= MAX_IOU_UNMATCHED}
         for s in res["thing_segments"]:
             if s["id"] not in matched_seg_ids:
-                if s["area"] >= 1200 and (s["area"] / img_area >= 0.008):
+                if s["area"] >= MIN_SEG_AREA_MISSING and (s["area"] / img_area >= MIN_REL_AREA_MISSING):
                     img_candidates.append({
                         "image": image_name,
                         "type": "missing_box",
@@ -408,7 +433,6 @@ def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> li
                     })
 
         # 4. Dấu hiệu instance_merge:
-        # Một segment phủ lên 2 box detection riêng biệt cùng lớp
         seg_to_matches: dict[int, list[dict]] = {}
         for m in res["matches"]:
             if m["segment"]:
@@ -417,11 +441,11 @@ def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> li
         for sid, mlist in seg_to_matches.items():
             if len(mlist) >= 2:
                 s = mlist[0]["segment"]
-                same_cls = [m for m in mlist if m["det_box"]["class_name"] == s["class_name"] and m["pixel_inside"] >= 250]
+                same_cls = [m for m in mlist if m["det_box"]["class_name"] == s["class_name"] and m["pixel_inside"] >= MIN_PIXEL_INSIDE_MERGE]
                 if len(same_cls) >= 2:
                     b1 = same_cls[0]["det_box"]["pixel_box"]
                     b2 = same_cls[1]["det_box"]["pixel_box"]
-                    if compute_box_iou(b1, b2) < 0.50:
+                    if compute_box_iou(b1, b2) < MAX_IOU_BETWEEN_BOXES_MERGE:
                         img_candidates.append({
                             "image": image_name,
                             "type": "instance_merge",
@@ -432,9 +456,7 @@ def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> li
                             "reason": f"Segment [{s['class_name']}] phủ lên {len(same_cls)} box detection riêng biệt",
                         })
 
-        # Nếu một ảnh có nhiều ứng viên, giữ ứng viên rõ nhất để danh sách gọn
         if img_candidates:
-            # Ưu tiên: class_swap > bbox_drift > missing_box > instance_merge
             type_prio = {"class_swap": 0, "bbox_drift": 1, "missing_box": 2, "instance_merge": 3}
             img_candidates.sort(key=lambda c: type_prio.get(c["type"], 9))
             candidates.append(img_candidates[0])
@@ -476,7 +498,7 @@ def crosscheck_all(delivery: Path) -> list[dict]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Pha 2.1 & 2.2: Đối chiếu detection ↔ panoptic và sinh ứng viên")
+    parser = argparse.ArgumentParser(description="Pha 2.1, 2.2, 2.3: Đối chiếu detection ↔ panoptic và sinh ứng viên")
     parser.add_argument("delivery", type=Path, help="Đường dẫn thư mục delivery")
     parser.add_argument("--image", type=str, default=None, help="Chỉ kiểm tra một ảnh cụ thể")
     parser.add_argument("--candidates", type=Path, default=None, help="Xuất danh sách ứng viên ra JSON")
