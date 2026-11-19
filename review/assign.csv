@@ -1,0 +1,12 @@
+image,type,class_det,class_pan,nguoi_xem,file_review
+000000006723,class_swap,truck,bus,N1 Lê Ngọc Dũng,review/n1_dung.csv
+000000009483,class_swap,tv,clock,N2 Bùi Quang Huy,review/n2_huy.csv
+000000009914,class_swap,hot dog,sandwich,N3 Nguyễn Sỹ Kiên,review/n3_kien.csv
+000000011122,class_swap,pizza,stop sign,N4 Nguyễn Bảo Khánh,review/n4_khanh.csv
+000000013597,class_swap,donut,cake,N5 Nguyễn Xuân Anh,review/n5_xanh.csv
+000000020553,class_swap,bottle,vase,N1 Lê Ngọc Dũng,review/n1_dung.csv
+000000024027,class_swap,bird,kite,N2 Bùi Quang Huy,review/n2_huy.csv
+000000000872,missing_box,,person,N3 Nguyễn Sỹ Kiên,review/n3_kien.csv
+000000001818,missing_box,,zebra,N4 Nguyễn Bảo Khánh,review/n4_khanh.csv
+000000003501,missing_box,,bowl,N5 Nguyễn Xuân Anh,review/n5_xanh.csv
+000000025424,missing_box,,tennis racket,N1 Lê Ngọc Dũng,review/n1_dung.csv
