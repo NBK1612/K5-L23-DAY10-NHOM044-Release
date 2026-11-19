@@ -2,6 +2,8 @@ import argparse
 import json
 from pathlib import Path
 
+from rules_det import check_detection
+
 
 def main():
     parser = argparse.ArgumentParser(description="Kiểm tra lô dataset")
@@ -24,8 +26,8 @@ def main():
         (delivery / "manifest.json").read_text(encoding="utf-8")
     )
 
-    # Sẽ nối các hàm kiểm N1 và N2 tại đây.
-    errors = []
+    # Hiện mới nối hai kiểm tra file của N1; N2 sẽ bổ sung sau.
+    errors = check_detection(delivery)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
@@ -42,7 +44,8 @@ def main():
         )
 
     print(f"Đã đọc manifest: {len(manifest['items'])} mục")
-    print("Đây là khung điều phối, chưa thực hiện kiểm lỗi.")
+    print("Đã kiểm N1: missing_image và wrong_hash; các phần khác chưa nối.")
+    print(f"Số phát hiện: {len(errors)}")
     print(f"Đã ghi: {args.out}")
 
 
