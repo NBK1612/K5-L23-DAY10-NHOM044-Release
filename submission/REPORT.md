@@ -8,7 +8,7 @@
   | 44007 (chỉ lỗi luật, P1) | 12 | ≈ 1.0 | — | ≈ 0.7 | chưa có lỗi gán nhãn |
   | 42 (chỉ lỗi luật, P1) | 11 | ≈ 1.0 | — | ≈ 0.8 | chưa có lỗi gán nhãn |
   | clean, seed 5, 50 ảnh | 0 | ≈ 1.0 | — | ≈ 1.0 | lô không gài lỗi, validator không báo nhầm |
-  | 44007 (sau review, P2) | <<>> | <<>> | <<>> | <<>> | <<>> |
+  | 44007 (sau review, P2) | 21 | ≈ 1.0 | ≈ 0.7 | ≈ 0.9 | 12 lỗi luật + 9 lỗi gán nhãn đã xác nhận qua review |
 
   Lỗi luật seed 44007: 2 missing_image, 1 wrong_hash, 1 invalid_class, 1 bbox_out_of_bounds, 2 duplicate_box, 1 guideline_mismatch, 1 scene_leak, 1 invalid_category_id, 2 thing_overlap. Lô sạch 0 lỗi cho thấy `thing_overlap` (so `area` với số pixel đếm từ mask) không cần dung sai: ở dữ liệu gốc hai số bằng nhau tuyệt đối.
 - Số ứng viên trên lô sạch (`--no-faults`, seed 5, 50 ảnh): **0**; hàng đợi trên seed luyện tập 44007: **11 ảnh** (seed 42: 13 ảnh). Số do N3 đo bằng `validate.py --candidates` (ghi trong phần đầu `validator/crosscheck.py`). Mỗi ảnh giữ một ứng viên; ảnh đã có lỗi luật không đưa vào hàng đợi.
@@ -30,7 +30,12 @@
 <<Trả lời bằng số của nhóm.>>
 
 ## 3. Quyết định và lineage
-<<QC v1 a/b, kết luận, vì sao R-021 phải xem lại hoặc train lại.>>
+- **QC v1:** 21/250 = 8,4% (12 lỗi luật + 9 lỗi gán nhãn đã xác nhận qua review bằng mắt).
+- **Kết luận:** **HOLD** — tỷ lệ lỗi 8,4% vượt xa ngưỡng cho phép 2% theo tiêu chuẩn QC. Lô v1 không đạt chuẩn bàn giao huấn luyện.
+- **Lineage:** Đã ghi sự kiện `decision: HOLD` cho lô `lab250_e9b358f6faee` và sau đó phát hành lô cha-con `release: lab250_e9b358f6faee_v2` với parent là `lab250_e9b358f6faee`.
+- **Vì sao training run R-021 phải xem lại hoặc train lại:**
+  Truy vấn `scripts/lineage.py impact --release-id lab250_e9b358f6faee` trả về: `R-021: affected=True action=review_or_retrain`.
+  Lý do là mô hình `R-021` đã được huấn luyện trực tiếp trên tập dữ liệu v1 chứa tới 8,4% lỗi gài (gồm ảnh thiếu file, nhầm nhãn, box lệch, box trùng...). Các trọng số (weights) của mô hình đã học theo các tín hiệu sai này. Việc sau đó nhóm tạo ra lô `v2` sạch hơn và loại bỏ ảnh lỗi hoàn toàn **không tự động làm sạch trọng số của model đã train**. Do đó, `R-021` bắt buộc phải được đánh giá lại mức độ suy giảm chất lượng hoặc phải train lại từ đầu trên lô dữ liệu v2.
 
 ## 4. Hash chứng minh gì, không chứng minh gì?
 **Chứng minh:**

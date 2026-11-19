@@ -1,0 +1,15 @@
+image,type,annotator,reviewer,action
+000000000776,bbox_out_of_bounds,A02,Q03,gán lại nhãn detection
+000000000872,missing_box,A02,Q03,gán lại nhãn detection
+000000002532,bbox_drift,A04,Q01,gán lại nhãn detection
+000000003501,missing_box,A04,Q01,gán lại nhãn detection
+000000005001,missing_image,A04,Q01,gán lại nhãn detection
+000000009590,missing_image,A05,Q02,gán lại nhãn detection
+000000009769,invalid_class,A05,Q02,gán lại nhãn detection
+000000009914,class_swap,A03,Q01,gán lại nhãn detection
+000000011122,class_swap,A03,Q01,gán lại nhãn detection
+000000013597,class_swap,A04,Q01,gán lại nhãn detection
+000000015338,duplicate_box,A04,Q01,gán lại nhãn detection
+000000023781,duplicate_box,A05,Q01,gán lại nhãn detection
+000000024027,class_swap,A05,Q01,gán lại nhãn detection
+000000025424,missing_box,A05,Q01,gán lại nhãn detection
