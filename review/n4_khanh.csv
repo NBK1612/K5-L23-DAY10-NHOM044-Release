@@ -1,0 +1,3 @@
+image,type,verdict,note
+000000011122,class_swap,confirmed,"Khánh: vật thật là biển báo STOP đỏ hình bát giác gắn trên hàng rào lưới, panoptic ghi stop sign là đúng, detection ghi pizza là sai"
+000000001818,missing_box,confirmed,"Khánh: thấy 2 con ngựa vằn rõ ràng (con lớn bên trái, con nhỏ đang rúc vào bụng), vùng zebra chiếm 44% ảnh là cả một con vật chứ không phải phần bị che, đáng có box riêng"
