@@ -1,6 +1,6 @@
 image,type,verdict,note
-000000006723,class_swap,confirmed,"Lê Ngọc Dũng: Vật thể là xe buýt bus; detection gán nhầm truck, panoptic ghi đúng bus."
-000000020553,category_swap,confirmed,"Lê Ngọc Dũng: Vật thể là chai bottle; detection ghi đúng bottle, panoptic gán nhầm vase."
-000000025424,missing_box,confirmed,"Lê Ngọc Dũng: Có vợt tennis trong tay người chơi; panoptic đã đánh dấu nhưng detection thiếu box riêng cho vợt."
-000000001353,instance_merge,rejected,"Lê Ngọc Dũng: Vùng mask tím chỉ bao một người; không quan sát thấy hai người riêng biệt bị gộp vào cùng vùng mask."
-000000008277,instance_merge,rejected,"Lê Ngọc Dũng: Vùng mask tím chỉ bao một vật broccoli; không quan sát thấy hai vật riêng biệt bị gộp vào cùng vùng mask."
+000000006723,category_swap,rejected,"Lê Ngọc Dũng (xem lại cùng Huy): box và vùng mask cùng một xe; nhìn gần là xe tải, cabin vuông cao có đèn cam trên nóc, lưới tản nhiệt kiểu xe tải, không có kính dài hay cửa khách của xe buýt; detection ghi truck đúng, panoptic ghi bus sai | Vòng 3 (tiêu chí chặt): xe ở xa, ảnh nhỏ và mờ, dáng xe gọi là bus hay truck đều được nên không chắc chắn thuộc một lớp -> rejected."
+000000020553,category_swap,rejected,"Lê Ngọc Dũng: Vật thể là chai bottle; detection ghi đúng bottle, panoptic gán nhầm vase. | Vòng 3 (tiêu chí chặt): chai bia nâu đang cắm hoa, được dùng như bình hoa nên gọi bottle hay vase đều được -> rejected."
+000000025424,missing_box,confirmed,Lê Ngọc Dũng: Có vợt tennis trong tay người chơi; panoptic đã đánh dấu nhưng detection thiếu box riêng cho vợt.
+000000001353,instance_merge,rejected,Lê Ngọc Dũng: Vùng mask tím chỉ bao một người; không quan sát thấy hai người riêng biệt bị gộp vào cùng vùng mask.
+000000008277,instance_merge,rejected,Lê Ngọc Dũng: Vùng mask tím chỉ bao một vật broccoli; không quan sát thấy hai vật riêng biệt bị gộp vào cùng vùng mask.

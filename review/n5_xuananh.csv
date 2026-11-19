@@ -2,4 +2,4 @@ image,type,verdict,note
 000000003501,missing_box,confirmed,"Xuân Anh: chiếc bát tô sứ đựng cơm và súp lơ xanh rất rõ ràng, detection thiếu box bowl"
 000000013597,class_swap,confirmed,"Xuân Anh: miếng bánh ngọt sô-cô-la hình tam giác trên đĩa, detection ghi donut sai, panoptic cake đúng"
 000000002153,instance_merge,rejected,"Xuân Anh: trận bóng chày, trọng tài đứng dạng chân phía sau người bắt bóng ngồi xổm; box 2 người chồng lấn tự nhiên do góc nhìn 2D, không phải lỗi gộp segment"
-000000008844,instance_merge,confirmed,"Xuân Anh: hai quả chuối riêng biệt trên nải có 2 box detection riêng nhưng panoptic gộp chung thành một segment banana duy nhất"
+000000008844,instance_merge,rejected,"Xuân Anh (xem lại cùng Kiên): vùng mask tím chỉ là một mảnh nhỏ của nải chuối phía sau, nải chuối to phía trước có viền panoptic riêng; hai box chồng nhau do che khuất nên segment chạm cả hai, không phải hai nải bị gộp"
