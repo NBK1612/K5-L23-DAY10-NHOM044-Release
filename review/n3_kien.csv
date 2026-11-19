@@ -1,0 +1,3 @@
+image,type,verdict,note
+000000009914,class_swap,confirmed,"Kiên: đĩa thức ăn gồm burger rắc vừng cắt đôi và khoai tây; nửa bánh bên phải là sandwich, nhãn detection ghi hot dog là sai, panoptic ghi sandwich đúng"
+000000000872,missing_box,confirmed,"Kiên: ảnh trận bóng chày có 2 người (vận động viên ném bóng áo xanh và người chạy áo trắng đội mũ), nhãn detection bị thiếu mất box cho người chạy áo trắng; panoptic có đủ 2 person"
