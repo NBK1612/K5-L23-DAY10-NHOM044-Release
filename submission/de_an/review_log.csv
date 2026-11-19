@@ -1,0 +1,41 @@
+image,type,verdict,note
+img_0044,bbox_drift,confirmed,"Dũng: Box lệch rõ xuống dưới: hụt đầu + 2 tay, thừa phần ván lướt; người nhìn rõ, không bị che"
+img_0012,class_swap,rejected,Huy: Đúng là ghế (pan bench sai) nhưng ghế bị bàn che phần lớn và bị cắt mép dưới
+img_0025,class_swap,rejected,"Kiên: Xe quá nhỏ, mờ (~20 px), không phân biệt được car/truck"
+img_0027,category_swap,confirmed,"Khánh: Đèn giao thông rõ ràng, không bị che; detection [traffic light] đúng, panoptic [elephant] sai -> category_swap"
+img_0033,class_swap,rejected,Xuân Anh: Xe diễu hành bị cắt mép trái và bị trang trí che; car/truck đều có thể
+img_0040,class_swap,rejected,"Dũng: Đàn gia súc rất nhỏ ở xa, chồng lấn nhau; không chắc cow hay sheep"
+img_0049,class_swap,rejected,"Huy: Ly bia không chân, đáy bị pizza che; cup/wine glass đều gọi được"
+img_0055,class_swap,rejected,Kiên: Xe van Peugeot Partner: car hay truck đều chấp nhận được
+img_0110,class_swap,rejected,"Khánh: Túi đen rất nhỏ, mờ; backpack/handbag đều có thể"
+img_0124,class_swap,confirmed,"Xuân Anh: Chim mòng biển rõ ràng; detection [kite] sai, panoptic [bird] đúng (chỉ chót cánh chạm mép, thân đầy đủ)"
+img_0129,class_swap,confirmed,"Dũng: Xe hơi bạc (hatchback/SUV nhỏ) nhìn rõ, không phải truck; detection sai"
+img_0143,class_swap,rejected,"Huy: Bình đỏ nhỏ, mờ trên bậu cửa; vase/bottle đều gọi được"
+img_0147,class_swap,confirmed,"Kiên: Xe hatchback (Wagon R) nhìn rõ toàn bộ đuôi xe; truck sai, panoptic car đúng"
+img_0157,class_swap,rejected,Khánh: Bàn picnic có ghế liền; bench/dining table đều gọi được
+img_0188,class_swap,rejected,"Xuân Anh: Ảnh quá tối, vật nhỏ và mờ; không xác định được cup hay wine glass"
+img_0217,class_swap,rejected,"Dũng: Lát đào/xuân đào, không hẳn orange cũng không hẳn apple; gọi lớp nào cũng được"
+img_0008,instance_merge,rejected,Huy: Vùng tím chỉ phủ 1 người (cầu thủ ngồi giữa); 2 box chồng lên cùng người
+img_0010,instance_merge,rejected,"Kiên: Vùng tím chủ yếu phủ 1 người phía sau, bị đầu bếp che; không chắc phủ 2 người riêng"
+img_0045,instance_merge,rejected,Khánh: Vùng tím phủ 1 gáy sách mờ; không thấy rõ 2 cuốn riêng
+img_0060,instance_merge,rejected,"Xuân Anh: Người nhỏ ở mép trái, sau lưới, bị cắt mép"
+img_0063,instance_merge,rejected,Dũng: Vùng tím chỉ là phần nhỏ của 1 người bị che phía sau
+img_0071,instance_merge,rejected,"Huy: Vùng tím phủ đúng 1 gấu bông (con giữa), không gộp con phía trước"
+img_0082,instance_merge,rejected,"Kiên: Cầu thủ nền mờ, bị cắt mép trên; vùng tím chỉ 1 người"
+img_0100,instance_merge,rejected,"Khánh: Cà rốt bó chồng lên nhau; vùng tím trông như 1 củ, không chắc gộp 2"
+img_0106,instance_merge,rejected,Xuân Anh: Vùng tím phủ 1 người (áo hồng) bị mũ ông lão che một phần
+img_0117,instance_merge,rejected,Dũng: Vùng tím là 1 người mảnh bị người đứng trước che
+img_0125,instance_merge,rejected,Huy: Các máy bay chồng lấn nhau; không xác định chắc vùng tím phủ cả máy bay thứ 2
+img_0179,instance_merge,rejected,Kiên: Vùng tím chỉ phủ 1 người (cô gái mờ); thợ ảnh bên cạnh có segment riêng
+img_0193,instance_merge,rejected,"Khánh: Đầu bò nhỏ ở xa, bị chắn song; vùng tím chỉ 1 con"
+img_0198,instance_merge,rejected,"Xuân Anh: Sách trên kệ bị cắt mép trái, mờ; không chắc vùng tím phủ 2 cuốn"
+img_0202,instance_merge,rejected,Dũng: Bông cải chồng lấn trong súp; vùng tím như 1 nhánh
+img_0203,instance_merge,rejected,Huy: Vùng tím là 1 xe bị xe máy + người che (2 mảnh rời của cùng xe)
+img_0209,instance_merge,rejected,"Kiên: Khán giả nền rất nhỏ, mờ; vùng tím chỉ 1 người"
+img_0212,instance_merge,confirmed,Khánh: Vùng tím phủ cả ván xanh nhạt và ván đỏ cạnh nhau (2 ván riêng); area 5457 ≈ tổng 2 box
+img_0220,instance_merge,rejected,"Xuân Anh: Sofa góc/liền khối; vùng tím có thể là 1 sofa, không chắc là 2"
+img_0243,instance_merge,rejected,"Dũng: Sách/hộp đĩa nhỏ, mờ, xếp chồng; không chắc 2 vật riêng"
+img_0250,instance_merge,rejected,"Huy: Vùng tím chủ yếu phủ bé trai; người phía sau bị che gần hết, không chắc"
+img_0026,missing_box,rejected,Kiên: Ngựa vằn trước (vùng tím) đã có box det:zebra khớp; con sau bị che
+img_0191,missing_box,confirmed,"Khánh: Người trượt tuyết nhìn rõ, không bị che; chỉ có box skis, không có box person"
+img_0213,missing_box,rejected,Xuân Anh: Ngựa vằn trước (vùng tím) đã có box det:zebra khớp; con sau bị che + cắt mép
