@@ -8,15 +8,21 @@ from pathlib import Path
 
 # Cùng dung sai mép ảnh với bộ kiểm bàn giao của đề.
 OVERFLOW_TOL = 0.01
+# Dung sai kích thước do nhãn YOLO được làm tròn 6 chữ số.
+SIZE_TOL = 0.000002
+CENTER_TOL_PX = 2.01
 
 
-def _check_label(delivery, item, valid_classes):
+def _check_label(delivery, item, valid_classes, image_size):
     label_path = (delivery / item["label"]).resolve()
     if not label_path.is_relative_to(delivery):
         raise ValueError("Đường dẫn nhãn phải nằm trong delivery")
 
     invalid_class = False
     overflow = False
+    duplicate = False
+    previous_boxes = []
+    image_width, image_height = image_size
     for line_no, text in enumerate(
         label_path.read_text(encoding="utf-8").splitlines(), start=1
     ):
@@ -46,11 +52,27 @@ def _check_label(delivery, item, valid_classes):
         ):
             overflow = True
 
+        # Khung lặp: cùng lớp, gần như cùng kích thước, tâm lệch <= 2 px.
+        # Không dùng riêng IoU: các vật thật có thể che/chồng lên nhau.
+        for old_class, old_cx, old_cy, old_w, old_h in previous_boxes:
+            if (
+                int(class_id) == old_class
+                and abs(w - old_w) <= SIZE_TOL
+                and abs(h - old_h) <= SIZE_TOL
+                and abs(cx - old_cx) * image_width <= CENTER_TOL_PX
+                and abs(cy - old_cy) * image_height <= CENTER_TOL_PX
+            ):
+                duplicate = True
+                break
+        previous_boxes.append((int(class_id), cx, cy, w, h))
+
     # Xét toàn file để ưu tiên ID sai dù nó nằm ở dòng sau.
     if invalid_class:
         return "invalid_class"
     if overflow:
         return "bbox_out_of_bounds"
+    if duplicate:
+        return "duplicate_box"
     return None
 
 
@@ -63,6 +85,13 @@ def check_detection(delivery):
         int(line.split(maxsplit=1)[0])
         for line in (delivery / "classes.txt").read_text(encoding="utf-8").splitlines()
         if line.strip()
+    }
+    panoptic = json.loads(
+        (delivery / "panoptic.json").read_text(encoding="utf-8")
+    )
+    image_sizes = {
+        Path(image["file_name"]).name: (image["width"], image["height"])
+        for image in panoptic["images"]
     }
     errors = []
 
@@ -85,7 +114,8 @@ def check_detection(delivery):
             errors.append({"type": "wrong_hash", "target": image_name})
             continue
 
-        code = _check_label(delivery, item, valid_classes)
+        image_size = image_sizes[image_path.name]
+        code = _check_label(delivery, item, valid_classes, image_size)
         if code is not None:
             errors.append({"type": code, "target": image_name})
 
