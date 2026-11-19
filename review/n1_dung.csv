@@ -1,0 +1,4 @@
+image,type,verdict,note
+000000006723,class_swap,confirmed,"Lê Ngọc Dũng: Vật thể là xe buýt bus; detection gán nhầm truck, panoptic ghi đúng bus."
+000000020553,category_swap,confirmed,"Lê Ngọc Dũng: Vật thể là chai bottle; detection ghi đúng bottle, panoptic gán nhầm vase."
+000000025424,missing_box,confirmed,"Lê Ngọc Dũng: Có vợt tennis trong tay người chơi; panoptic đã đánh dấu nhưng detection thiếu box riêng cho vợt."
