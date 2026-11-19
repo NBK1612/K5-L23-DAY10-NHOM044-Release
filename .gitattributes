@@ -1,0 +1,2 @@
+# Giữ nguyên byte của lô bàn giao: không đổi LF/CRLF khi checkout (sha256 trong manifest.csv và .sha256 tính trên byte gốc)
+submission/**/handover/** -text

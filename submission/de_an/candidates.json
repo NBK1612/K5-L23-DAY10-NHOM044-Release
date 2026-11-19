@@ -1,0 +1,364 @@
+{
+  "candidates": [
+    {
+      "image": "img_0008",
+      "type": "instance_merge",
+      "class_det": "person",
+      "class_pan": "person",
+      "iou": 0.289,
+      "pixel_ratio": 0.753,
+      "reason": "Segment [person] (area=7116) phủ lên 2 box riêng biệt (5355 px và 5452 px)"
+    },
+    {
+      "image": "img_0010",
+      "type": "instance_merge",
+      "class_det": "person",
+      "class_pan": "person",
+      "iou": 0.261,
+      "pixel_ratio": 0.681,
+      "reason": "Segment [person] (area=10024) phủ lên 2 box riêng biệt (6829 px và 1939 px)"
+    },
+    {
+      "image": "img_0012",
+      "type": "class_swap",
+      "class_det": "chair",
+      "class_pan": "bench",
+      "iou": 0.982,
+      "pixel_ratio": 0.999,
+      "reason": "Detection ghi [chair], Panoptic ghi [bench] (IoU=0.98)"
+    },
+    {
+      "image": "img_0025",
+      "type": "class_swap",
+      "class_det": "truck",
+      "class_pan": "car",
+      "iou": 0.877,
+      "pixel_ratio": 1.0,
+      "reason": "Detection ghi [truck], Panoptic ghi [car] (IoU=0.88)"
+    },
+    {
+      "image": "img_0026",
+      "type": "missing_box",
+      "class_det": null,
+      "class_pan": "zebra",
+      "iou": 0.0,
+      "pixel_ratio": 0.0,
+      "reason": "Segment thing [zebra] (40406 px, 14.9% ảnh) không có box detection"
+    },
+    {
+      "image": "img_0027",
+      "type": "class_swap",
+      "class_det": "traffic light",
+      "class_pan": "elephant",
+      "iou": 0.973,
+      "pixel_ratio": 1.0,
+      "reason": "Detection ghi [traffic light], Panoptic ghi [elephant] (IoU=0.97)"
+    },
+    {
+      "image": "img_0033",
+      "type": "class_swap",
+      "class_det": "truck",
+      "class_pan": "car",
+      "iou": 0.93,
+      "pixel_ratio": 0.997,
+      "reason": "Detection ghi [truck], Panoptic ghi [car] (IoU=0.93)"
+    },
+    {
+      "image": "img_0040",
+      "type": "class_swap",
+      "class_det": "cow",
+      "class_pan": "sheep",
+      "iou": 0.827,
+      "pixel_ratio": 0.992,
+      "reason": "Detection ghi [cow], Panoptic ghi [sheep] (IoU=0.83)"
+    },
+    {
+      "image": "img_0044",
+      "type": "bbox_drift",
+      "class_det": "person",
+      "class_pan": "person",
+      "iou": 0.55,
+      "pixel_ratio": 0.727,
+      "reason": "Box [person] tịnh tiến 19% (31 px) so với segment, IoU=0.55, pixel_ratio=0.73 (6120/8416 px)"
+    },
+    {
+      "image": "img_0045",
+      "type": "instance_merge",
+      "class_det": "book",
+      "class_pan": "book",
+      "iou": 0.308,
+      "pixel_ratio": 0.744,
+      "reason": "Segment [book] (area=1279) phủ lên 2 box riêng biệt (951 px và 377 px)"
+    },
+    {
+      "image": "img_0049",
+      "type": "class_swap",
+      "class_det": "cup",
+      "class_pan": "wine glass",
+      "iou": 0.896,
+      "pixel_ratio": 0.989,
+      "reason": "Detection ghi [cup], Panoptic ghi [wine glass] (IoU=0.90)"
+    },
+    {
+      "image": "img_0055",
+      "type": "class_swap",
+      "class_det": "car",
+      "class_pan": "truck",
+      "iou": 0.964,
+      "pixel_ratio": 0.998,
+      "reason": "Detection ghi [car], Panoptic ghi [truck] (IoU=0.96)"
+    },
+    {
+      "image": "img_0060",
+      "type": "instance_merge",
+      "class_det": "person",
+      "class_pan": "person",
+      "iou": 0.069,
+      "pixel_ratio": 0.428,
+      "reason": "Segment [person] (area=2577) phủ lên 2 box riêng biệt (1104 px và 805 px)"
+    },
+    {
+      "image": "img_0063",
+      "type": "instance_merge",
+      "class_det": "person",
+      "class_pan": "person",
+      "iou": 0.188,
+      "pixel_ratio": 0.166,
+      "reason": "Segment [person] (area=2247) phủ lên 2 box riêng biệt (373 px và 1697 px)"
+    },
+    {
+      "image": "img_0071",
+      "type": "instance_merge",
+      "class_det": "teddy bear",
+      "class_pan": "teddy bear",
+      "iou": 0.27,
+      "pixel_ratio": 0.693,
+      "reason": "Segment [teddy bear] (area=24509) phủ lên 2 box riêng biệt (16989 px và 7409 px)"
+    },
+    {
+      "image": "img_0082",
+      "type": "instance_merge",
+      "class_det": "person",
+      "class_pan": "person",
+      "iou": 0.337,
+      "pixel_ratio": 0.572,
+      "reason": "Segment [person] (area=2004) phủ lên 2 box riêng biệt (1146 px và 410 px)"
+    },
+    {
+      "image": "img_0100",
+      "type": "instance_merge",
+      "class_det": "carrot",
+      "class_pan": "carrot",
+      "iou": 0.506,
+      "pixel_ratio": 0.632,
+      "reason": "Segment [carrot] (area=18302) phủ lên 2 box riêng biệt (11561 px và 3431 px)"
+    },
+    {
+      "image": "img_0106",
+      "type": "instance_merge",
+      "class_det": "person",
+      "class_pan": "person",
+      "iou": 0.059,
+      "pixel_ratio": 0.372,
+      "reason": "Segment [person] (area=10836) phủ lên 2 box riêng biệt (4031 px và 4421 px)"
+    },
+    {
+      "image": "img_0110",
+      "type": "class_swap",
+      "class_det": "backpack",
+      "class_pan": "handbag",
+      "iou": 0.875,
+      "pixel_ratio": 0.978,
+      "reason": "Detection ghi [backpack], Panoptic ghi [handbag] (IoU=0.88)"
+    },
+    {
+      "image": "img_0117",
+      "type": "instance_merge",
+      "class_det": "person",
+      "class_pan": "person",
+      "iou": 0.106,
+      "pixel_ratio": 0.475,
+      "reason": "Segment [person] (area=950) phủ lên 2 box riêng biệt (451 px và 527 px)"
+    },
+    {
+      "image": "img_0124",
+      "type": "class_swap",
+      "class_det": "kite",
+      "class_pan": "bird",
+      "iou": 0.986,
+      "pixel_ratio": 1.0,
+      "reason": "Detection ghi [kite], Panoptic ghi [bird] (IoU=0.99)"
+    },
+    {
+      "image": "img_0125",
+      "type": "instance_merge",
+      "class_det": "airplane",
+      "class_pan": "airplane",
+      "iou": 0.379,
+      "pixel_ratio": 0.659,
+      "reason": "Segment [airplane] (area=19639) phủ lên 2 box riêng biệt (12942 px và 7891 px)"
+    },
+    {
+      "image": "img_0129",
+      "type": "class_swap",
+      "class_det": "truck",
+      "class_pan": "car",
+      "iou": 0.966,
+      "pixel_ratio": 1.0,
+      "reason": "Detection ghi [truck], Panoptic ghi [car] (IoU=0.97)"
+    },
+    {
+      "image": "img_0143",
+      "type": "class_swap",
+      "class_det": "vase",
+      "class_pan": "bottle",
+      "iou": 0.916,
+      "pixel_ratio": 0.99,
+      "reason": "Detection ghi [vase], Panoptic ghi [bottle] (IoU=0.92)"
+    },
+    {
+      "image": "img_0147",
+      "type": "class_swap",
+      "class_det": "truck",
+      "class_pan": "car",
+      "iou": 0.92,
+      "pixel_ratio": 0.996,
+      "reason": "Detection ghi [truck], Panoptic ghi [car] (IoU=0.92)"
+    },
+    {
+      "image": "img_0157",
+      "type": "class_swap",
+      "class_det": "bench",
+      "class_pan": "dining table",
+      "iou": 0.891,
+      "pixel_ratio": 1.0,
+      "reason": "Detection ghi [bench], Panoptic ghi [dining table] (IoU=0.89)"
+    },
+    {
+      "image": "img_0179",
+      "type": "instance_merge",
+      "class_det": "person",
+      "class_pan": "person",
+      "iou": 0.057,
+      "pixel_ratio": 0.17,
+      "reason": "Segment [person] (area=2330) phủ lên 2 box riêng biệt (395 px và 1850 px)"
+    },
+    {
+      "image": "img_0188",
+      "type": "class_swap",
+      "class_det": "cup",
+      "class_pan": "wine glass",
+      "iou": 0.837,
+      "pixel_ratio": 0.946,
+      "reason": "Detection ghi [cup], Panoptic ghi [wine glass] (IoU=0.84)"
+    },
+    {
+      "image": "img_0191",
+      "type": "missing_box",
+      "class_det": null,
+      "class_pan": "person",
+      "iou": 0.0,
+      "pixel_ratio": 0.0,
+      "reason": "Segment thing [person] (4564 px, 1.5% ảnh) không có box detection"
+    },
+    {
+      "image": "img_0193",
+      "type": "instance_merge",
+      "class_det": "cow",
+      "class_pan": "cow",
+      "iou": 0.109,
+      "pixel_ratio": 0.557,
+      "reason": "Segment [cow] (area=989) phủ lên 2 box riêng biệt (551 px và 759 px)"
+    },
+    {
+      "image": "img_0198",
+      "type": "instance_merge",
+      "class_det": "book",
+      "class_pan": "book",
+      "iou": 0.298,
+      "pixel_ratio": 0.386,
+      "reason": "Segment [book] (area=1943) phủ lên 2 box riêng biệt (750 px và 748 px)"
+    },
+    {
+      "image": "img_0202",
+      "type": "instance_merge",
+      "class_det": "broccoli",
+      "class_pan": "broccoli",
+      "iou": 0.093,
+      "pixel_ratio": 0.745,
+      "reason": "Segment [broccoli] (area=4530) phủ lên 2 box riêng biệt (3375 px và 1101 px)"
+    },
+    {
+      "image": "img_0203",
+      "type": "instance_merge",
+      "class_det": "car",
+      "class_pan": "car",
+      "iou": 0.112,
+      "pixel_ratio": 0.445,
+      "reason": "Segment [car] (area=3291) phủ lên 2 box riêng biệt (1463 px và 999 px)"
+    },
+    {
+      "image": "img_0209",
+      "type": "instance_merge",
+      "class_det": "person",
+      "class_pan": "person",
+      "iou": 0.012,
+      "pixel_ratio": 0.661,
+      "reason": "Segment [person] (area=1003) phủ lên 2 box riêng biệt (663 px và 364 px)"
+    },
+    {
+      "image": "img_0212",
+      "type": "instance_merge",
+      "class_det": "surfboard",
+      "class_pan": "surfboard",
+      "iou": 0.511,
+      "pixel_ratio": 0.709,
+      "reason": "Segment [surfboard] (area=5457) phủ lên 2 box riêng biệt (3868 px và 1328 px)"
+    },
+    {
+      "image": "img_0213",
+      "type": "missing_box",
+      "class_det": null,
+      "class_pan": "zebra",
+      "iou": 0.0,
+      "pixel_ratio": 0.0,
+      "reason": "Segment thing [zebra] (23033 px, 13.8% ảnh) không có box detection"
+    },
+    {
+      "image": "img_0217",
+      "type": "class_swap",
+      "class_det": "orange",
+      "class_pan": "apple",
+      "iou": 0.997,
+      "pixel_ratio": 1.0,
+      "reason": "Detection ghi [orange], Panoptic ghi [apple] (IoU=1.00)"
+    },
+    {
+      "image": "img_0220",
+      "type": "instance_merge",
+      "class_det": "couch",
+      "class_pan": "couch",
+      "iou": 0.155,
+      "pixel_ratio": 0.203,
+      "reason": "Segment [couch] (area=16700) phủ lên 2 box riêng biệt (3398 px và 9711 px)"
+    },
+    {
+      "image": "img_0243",
+      "type": "instance_merge",
+      "class_det": "book",
+      "class_pan": "book",
+      "iou": 0.281,
+      "pixel_ratio": 0.643,
+      "reason": "Segment [book] (area=1301) phủ lên 2 box riêng biệt (836 px và 819 px)"
+    },
+    {
+      "image": "img_0250",
+      "type": "instance_merge",
+      "class_det": "person",
+      "class_pan": "person",
+      "iou": 0.176,
+      "pixel_ratio": 0.392,
+      "reason": "Segment [person] (area=9955) phủ lên 2 box riêng biệt (3905 px và 4851 px)"
+    }
+  ]
+}
