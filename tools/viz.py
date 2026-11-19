@@ -308,7 +308,10 @@ def load_jobs(args, dl: Delivery) -> list[dict]:
         data = json.loads(Path(args.candidates).read_text(encoding="utf-8"))
         cands = data["candidates"] if isinstance(data, dict) else data
     if args.images:
+        # có --images thì chỉ vẽ đúng các ảnh đó (dùng thông tin ứng viên nếu ảnh có trong --candidates)
+        wanted = set(args.images)
         known = {c["image"] for c in cands}
+        cands = [c for c in cands if c["image"] in wanted]
         cands += [{"image": n, "type": "xem", "reason": "xem thủ công"} for n in args.images if n not in known]
     if args.assign:
         with open(args.assign, encoding="utf-8-sig", newline="") as f:

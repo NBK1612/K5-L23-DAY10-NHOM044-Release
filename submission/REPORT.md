@@ -11,23 +11,42 @@
   | 44007 (sau review, P2) | 21 | ≈ 1.0 | ≈ 0.7 | ≈ 0.9 | 12 lỗi luật + 9 lỗi gán nhãn đã xác nhận qua review |
 
   Lỗi luật seed 44007: 2 missing_image, 1 wrong_hash, 1 invalid_class, 1 bbox_out_of_bounds, 2 duplicate_box, 1 guideline_mismatch, 1 scene_leak, 1 invalid_category_id, 2 thing_overlap. Lô sạch 0 lỗi cho thấy `thing_overlap` (so `area` với số pixel đếm từ mask) không cần dung sai: ở dữ liệu gốc hai số bằng nhau tuyệt đối.
-- Số ứng viên trên lô sạch (`--no-faults`, seed 5, 50 ảnh): **0**; hàng đợi trên seed luyện tập 44007: **11 ảnh** (seed 42: 13 ảnh). Số do N3 đo bằng `validate.py --candidates` (ghi trong phần đầu `validator/crosscheck.py`). Mỗi ảnh giữ một ứng viên; ảnh đã có lỗi luật không đưa vào hàng đợi.
+- Số ứng viên (đo bằng `validate.py --candidates`; ảnh đã có lỗi luật không đưa vào hàng đợi). Ngưỡng được chỉnh qua 3 vòng, mỗi vòng review đủ hàng đợi rồi mới chấm một lần:
+
+  | Vòng | Lô sạch (seed 5, 50 ảnh) | Seed 44007 | Lô khác | Lỗi gán nhãn `confirmed` | F1 cross_check |
+  |---|---:|---:|---|---:|---:|
+  | 1 (ngưỡng chặt) | 0 | 11 ảnh | r42: 13 | 11 | ≈ 0.6 |
+  | 2 (nới ngưỡng) | 3 | 26 ứng viên / 24 ảnh | r42: 32 | 13 | ≈ 0.5 |
+  | 3 (bbox_drift đo tịnh tiến + tiêu chí xác nhận chặt) | 3 | 28 ứng viên / 27 ảnh | r777 (`--opaque`): 31 | 9 | ≈ 0.7 |
+
+  Vòng 1 bỏ sót nhiều (không có ứng viên `bbox_drift`/`instance_merge`); vòng 2 thêm ứng viên nhưng nhóm xác nhận cả ca lệch tự nhiên; vòng 3 xem lại chéo 13 dòng `confirmed` (`review/xem_lai_cheo.csv`) và áp tiêu chí chặt cho mọi dòng. Lô sạch còn 3 ứng viên, đều `instance_merge` do che khuất.
 - Ngưỡng đã chọn và cách chọn (không dùng `_private`):
   - **Cách ghép:** đổi box YOLO sang pixel, ghép lớp qua tên (`classes.txt` ↔ `categories`), mỗi box ghép với segment thing có IoU bbox cao nhất, bỏ segment `iscrowd`. Tín hiệu chính là **tỉ lệ pixel của mask nằm trong box** (đếm từ mask PNG bằng `scripts/pngutil.py`), không chỉ IoU bbox.
-  - **Ngưỡng:**
+  - **Ngưỡng hiện tại (vòng 3, `validator/crosscheck.py`):**
 
     | Dấu hiệu | Điều kiện báo ứng viên |
     |---|---|
-    | `class_swap` / `category_swap` | box và segment trùng vị trí (IoU ≥ 0,35) nhưng khác lớp; segment ≥ 400 px hoặc box ≥ 0,3% ảnh |
-    | `bbox_drift` | cùng lớp, IoU ≥ 0,05, tỉ lệ pixel mask trong box < 0,70, segment ≥ 600 px |
-    | `missing_box` | segment thing không có box nào đạt IoU ≥ 0,20, segment ≥ 1200 px và ≥ 0,8% ảnh |
-    | `instance_merge` | một segment có ≥ 250 px nằm trong mỗi box của ít nhất 2 box cùng lớp, hai box IoU < 0,5 |
+    | `class_swap` / `category_swap` | box và segment trùng vị trí (IoU ≥ 0,30) nhưng khác lớp; segment ≥ 200 px hoặc box ≥ 0,2% ảnh |
+    | `bbox_drift` | ghép box với segment **cùng lớp**; hai cạnh đối diện dịch cùng chiều (tịnh tiến) ≥ 8% kích thước vật và ≥ 4 px; segment ≥ 500 px; bỏ qua nếu box trùng một segment khác lớp tốt hơn (để `class_swap` xử lý) |
+    | `missing_box` | segment thing không có box nào đạt IoU ≥ 0,20; segment ≥ 600 px và ≥ 0,4% ảnh |
+    | `instance_merge` | một segment có ≥ 350 px nằm trong mỗi box của ít nhất 2 box cùng lớp; mỗi box chứa 15–85% segment, tổng ≥ 70%; hai box IoU ≤ 0,40 |
 
-  - **Cách chọn:** chạy trên lô sạch (mọi ứng viên ở đó là lệch tự nhiên của COCO: vật bị che, crowd) và nâng ngưỡng đến khi lô sạch còn 0 ứng viên, đồng thời kiểm hàng đợi seed 44007 đủ nhỏ để 5 người xem hết. Ví dụ `bbox_drift`: trên lô sạch, tỉ lệ pixel trong box của cặp đúng thấp nhất là 0,728, nên chọn ngưỡng 0,70 nằm dưới mức đó.
-  - **Rủi ro đã biết:** ngưỡng `bbox_drift` sát mức lệch tự nhiên (0,70 so với 0,728); đề ẩn có thể có độ lệch box khác, nên ngưỡng chặt có thể bỏ sót. `class_swap` và `category_swap` cùng một dấu hiệu, bên nào sai do người xem ảnh quyết định.
+  - **Cách chọn:** chạy trên lô sạch (mọi ứng viên ở đó là lệch tự nhiên của COCO: vật bị che, crowd) và đặt ngưỡng ngoài vùng nhiễu đo được, đồng thời giữ hàng đợi seed 44007 đủ nhỏ để 5 người xem hết. Ví dụ `bbox_drift`: trên lô sạch, độ tịnh tiến lớn nhất của cặp đúng (segment ≥ 200 px) là 0,057, nên chọn 0,08; vật < 100 px dịch tới 0,07–0,15 chỉ vì làm tròn pixel nên phải loại vật nhỏ. Đã thử thêm trên lô `--opaque` seed 777 (tên `img_xxxx`) để chắc ngưỡng không chỉ khớp một lô.
+  - **Rủi ro đã biết:** đề ẩn có thể có độ lệch box khác lô luyện tập; `instance_merge` vẫn sinh nhiều ca che khuất tự nhiên (vòng 3: 13/13 ứng viên `instance_merge` của seed 44007 bị `rejected`). `class_swap` và `category_swap` cùng một dấu hiệu, bên nào sai do người xem ảnh quyết định.
 
 ## 2. Vì sao báo hết ứng viên làm F1 giảm?
-<<Trả lời bằng số của nhóm.>>
+F1 là trung bình điều hoà của precision (báo đúng / tổng số báo) và recall (bắt được / tổng lỗi thật), nên báo thừa bị trừ ngang bỏ sót. Báo hết ứng viên làm recall tăng chút ít nhưng precision giảm mạnh, vì phần lớn ứng viên là lệch tự nhiên giữa detection và panoptic của COCO (vật bị che, đứng sát nhau, crowd), không phải lỗi gài.
+
+Số của nhóm trên seed 44007 (mỗi dòng là một danh sách trọn vẹn sau một vòng review, chấm một lần):
+
+| Danh sách lỗi gán nhãn nộp | Số dòng `confirmed` | F1 cross_check | F1 tổng |
+|---|---:|---:|---:|
+| Vòng 2: xác nhận rộng (gồm ca lệch tự nhiên, ca mơ hồ bus/truck, cup/wine glass) | 13 | ≈ 0.5 | ≈ 0.8 |
+| Vòng 3: cùng hàng đợi, chỉ xác nhận ca chắc chắn qua xem lại chéo | 9 | ≈ 0.7 | ≈ 0.9 |
+
+- Hàng đợi vòng 3 có 28 ứng viên. Nếu nộp cả 28 mà không xem ảnh, ít nhất 13 ứng viên `instance_merge` mà cả nhóm đã mở ảnh và thấy là che khuất tự nhiên sẽ thành báo thừa, nên F1 còn thấp hơn vòng 2.
+- Giữa vòng 2 và vòng 3, nhóm bỏ 5 dòng `confirmed` không chắc chắn (xe ở xa bus/truck, chai cắm hoa bottle/vase, cốc nhỏ cup/wine glass, ngựa vằn bị cắt mép, nải chuối bị che) và thêm 1 dòng `bbox_drift` mới; F1 cross_check tăng từ ≈ 0.5 lên ≈ 0.7. Mỗi dòng sai làm tăng FP, và ca chọn sai chiều (`class_swap` thay vì `category_swap`) còn bị tính vừa FP vừa FN.
+- Vì vậy nhóm chỉ `confirmed` khi nhìn ảnh thấy chắc chắn, còn lại ghi `rejected` kèm lý do (20/29 dòng review là `rejected`).
 
 ## 3. Quyết định và lineage
 - **QC v1:** 21/250 = 8,4% (12 lỗi luật + 9 lỗi gán nhãn đã xác nhận qua review bằng mắt).
@@ -65,3 +84,8 @@
 - So hai lô: ảnh, nhãn, `metadata.json` và danh sách lỗi gài giống hệt; chỉ 241/250 mask PNG khác sha256. Giải nén thử 40 mask thì pixel giống hệt: `pngutil.write_rgb` nén bằng `zlib`, zlib-ng nén ra byte khác, nên `mask_sha256` trong `manifest.json` và `release_id` đổi.
 - Hệ quả: các máy trong nhóm không cùng `release_id`; nếu dựng v2 ở máy khác phiên bản thì hash mask lệch.
 - Nhóm xử lý: cả nhóm chạy mọi script bằng `py -3.12`. Không sửa `scripts/`.
+- **Đề nghị khi chấm:** `export_submission.py --import` tạo lại lô v1 trên máy người chấm. Nếu máy đó là Windows với Python ≥ 3.14, `release_id` sẽ khác `lab250_e9b358f6faee`, `check_handover.py` tìm `handover/<mã khác>_v2` và báo FAIL H4 rồi dừng, dù bài đúng. Nhóm đã giả lập (đổi mức nén PNG, pixel giữ nguyên) và thấy đúng hiện tượng này. Đề nghị chạy bằng Python ≤ 3.13.
+
+**Ký tự xuống dòng làm lệch sha256 khi clone trên Windows.**
+- Git trên Windows thường bật `core.autocrlf=true`: khi checkout, nhãn `.txt` trong `submission/r44007/handover/` bị đổi LF → CRLF, sha256 khác `manifest.csv` nên `check_handover.py` báo FAIL H7, H8, H15 (đã gặp trên máy N4), dù bytes đã commit đúng (kiểm từ bytes trong git: 17/17 PASS).
+- Nhóm xử lý: thêm `.gitattributes` với `submission/**/handover/** -text` để git giữ nguyên byte; checkout lại thì 17/17 PASS trên Windows.
