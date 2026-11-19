@@ -5,6 +5,11 @@ from pathlib import Path
 from rules_det import check_detection
 from rules_meta import check_meta
 
+try:
+    from crosscheck import find_candidates
+except ImportError:
+    from validator.crosscheck import find_candidates
+
 
 # Quy ước ưu tiên của Nhóm 044; scene_leak được giữ riêng theo cảnh.
 RULE_PRIORITY = {
@@ -73,18 +78,24 @@ def main():
         encoding="utf-8",
     )
 
-    # Sẽ nối phần sinh ứng viên của N3 tại đây.
+    # Nối phần sinh ứng viên của N3 (Pha 2.2):
+    candidates_count = 0
     if args.candidates is not None:
+        candidates = find_candidates(delivery, rule_errors=errors)
+        candidates_count = len(candidates)
         args.candidates.parent.mkdir(parents=True, exist_ok=True)
         args.candidates.write_text(
-            json.dumps({"candidates": []}, indent=2),
+            json.dumps({"candidates": candidates}, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
 
     print(f"Đã đọc manifest: {len(manifest['items'])} mục")
     print("Đã nối N1 + N2: đủ 9 loại lỗi luật, có ưu tiên và khử trùng.")
-    print("Chưa nối N3: --candidates vẫn là khung, chưa đối chiếu ngữ nghĩa.")
-    print(f"Số phát hiện: {len(errors)}")
+    if args.candidates is not None:
+        print(f"Đã nối N3: sinh {candidates_count} ứng viên vào {args.candidates}")
+    else:
+        print("Không dùng cờ --candidates, chỉ xuất lỗi luật.")
+    print(f"Số phát hiện lỗi luật: {len(errors)}")
     print(f"Đã ghi: {args.out}")
 
 
