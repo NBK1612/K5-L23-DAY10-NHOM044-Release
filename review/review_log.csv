@@ -1,0 +1,12 @@
+image,type,verdict,note
+000000006723,class_swap,confirmed,"Lê Ngọc Dũng: Vật thể là xe buýt bus; detection gán nhầm truck, panoptic ghi đúng bus."
+000000020553,category_swap,confirmed,"Lê Ngọc Dũng: Vật thể là chai bottle; detection ghi đúng bottle, panoptic gán nhầm vase."
+000000025424,missing_box,confirmed,Lê Ngọc Dũng: Có vợt tennis trong tay người chơi; panoptic đã đánh dấu nhưng detection thiếu box riêng cho vợt.
+000000009483,category_swap,confirmed,"Huy: vật lớn là màn hình máy tính (COCO xếp monitor vào lớp tv), detection ghi tv đúng, panoptic ghi clock sai; 2 ô nhỏ giống màn hình CCTV, hai nguồn cùng ghi tv nên không tính"
+000000024027,class_swap,confirmed,"Huy: vật là cái diều đang bay, panoptic ghi kite đúng, detection ghi bird sai"
+000000009914,class_swap,confirmed,"Kiên: đĩa thức ăn gồm burger rắc vừng cắt đôi và khoai tây; nửa bánh bên phải là sandwich, nhãn detection ghi hot dog là sai, panoptic ghi sandwich đúng"
+000000000872,missing_box,confirmed,"Kiên: ảnh trận bóng chày có 2 người (vận động viên ném bóng áo xanh và người chạy áo trắng đội mũ), nhãn detection bị thiếu mất box cho người chạy áo trắng; panoptic có đủ 2 person"
+000000011122,class_swap,confirmed,"Khánh: vật thật là biển báo STOP đỏ hình bát giác gắn trên hàng rào lưới, panoptic ghi stop sign là đúng, detection ghi pizza là sai"
+000000001818,missing_box,confirmed,"Khánh: thấy 2 con ngựa vằn rõ ràng (con lớn bên trái, con nhỏ đang rúc vào bụng), vùng zebra chiếm 44% ảnh là cả một con vật chứ không phải phần bị che, đáng có box riêng"
+000000003501,missing_box,confirmed,"Xuân Anh: chiếc bát tô sứ đựng cơm và súp lơ xanh rất rõ ràng, detection thiếu box bowl"
+000000013597,class_swap,confirmed,"Xuân Anh: miếng bánh ngọt sô-cô-la hình tam giác trên đĩa, detection ghi donut sai, panoptic cake đúng"
