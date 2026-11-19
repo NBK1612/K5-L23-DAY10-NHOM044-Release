@@ -3,6 +3,40 @@ import json
 from pathlib import Path
 
 from rules_det import check_detection
+from rules_meta import check_meta
+
+
+# Quy ước ưu tiên của Nhóm 044; scene_leak được giữ riêng theo cảnh.
+RULE_PRIORITY = {
+    "missing_image": 0,
+    "wrong_hash": 1,
+    "guideline_mismatch": 2,
+    "invalid_class": 3,
+    "bbox_out_of_bounds": 4,
+    "duplicate_box": 5,
+    "invalid_category_id": 6,
+    "thing_overlap": 7,
+}
+
+
+def merge_rule_findings(findings):
+    """Mỗi ảnh giữ lỗi ưu tiên cao nhất; khử trùng cảnh độc lập với ảnh."""
+    images = {}
+    scenes = set()
+    for finding in findings:
+        kind, target = finding["type"], finding["target"]
+        if kind == "scene_leak":
+            scenes.add(target)
+            continue
+        if kind not in RULE_PRIORITY:
+            raise ValueError(f"Không phải loại lỗi luật được hỗ trợ: {kind}")
+        current = images.get(target)
+        if current is None or RULE_PRIORITY[kind] < RULE_PRIORITY[current]:
+            images[target] = kind
+
+    pairs = [(kind, target) for target, kind in images.items()]
+    pairs.extend(("scene_leak", target) for target in scenes)
+    return [{"type": kind, "target": target} for kind, target in sorted(pairs)]
 
 
 def main():
@@ -16,6 +50,8 @@ def main():
     outputs = [args.out]
     if args.candidates is not None:
         outputs.append(args.candidates)
+    if len({output.resolve() for output in outputs}) != len(outputs):
+        parser.error("--out và --candidates phải là hai file khác nhau")
 
     # Không cho ghi kết quả vào bên trong lô v1.
     for output in outputs:
@@ -26,8 +62,10 @@ def main():
         (delivery / "manifest.json").read_text(encoding="utf-8")
     )
 
-    # Hiện nối đủ năm kiểm tra N1; N2/N3 sẽ bổ sung sau.
-    errors = check_detection(delivery)
+    # N1 và N2 chỉ đọc delivery; gộp xong mới ghi một kết quả chung.
+    errors = merge_rule_findings(
+        check_detection(delivery) + check_meta(delivery)
+    )
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
@@ -44,8 +82,8 @@ def main():
         )
 
     print(f"Đã đọc manifest: {len(manifest['items'])} mục")
-    print("Đã kiểm đủ 5 loại lỗi N1: file, hash, lớp, khung tràn và khung lặp.")
-    print("Chưa nối phần N2/N3; đây chưa phải validator hoàn chỉnh của nhóm.")
+    print("Đã nối N1 + N2: đủ 9 loại lỗi luật, có ưu tiên và khử trùng.")
+    print("Chưa nối N3: --candidates vẫn là khung, chưa đối chiếu ngữ nghĩa.")
     print(f"Số phát hiện: {len(errors)}")
     print(f"Đã ghi: {args.out}")
 
