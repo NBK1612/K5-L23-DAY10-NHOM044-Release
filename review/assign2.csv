@@ -1,0 +1,14 @@
+image,type,class_det,class_pan,nguoi_xem,file_review
+000000015517,bbox_drift|instance_merge,bus|bus,bus|bus,N2 Bùi Quang Huy,review/n2_huy.csv
+000000018380,class_swap|instance_merge,cup|person,wine glass|person,N3 Nguyễn Sỹ Kiên,review/n3_kien.csv
+000000001000,instance_merge,person,person,N4 Nguyễn Bảo Khánh,review/n4_khanh.csv
+000000001353,instance_merge,person,person,N1 Lê Ngọc Dũng,review/n1_dung.csv
+000000002153,instance_merge,person,person,N5 Nguyễn Xuân Anh,review/n5_xuananh.csv
+000000002685,instance_merge,person,person,N2 Bùi Quang Huy,review/n2_huy.csv
+000000005992,instance_merge,sheep,sheep,N3 Nguyễn Sỹ Kiên,review/n3_kien.csv
+000000006771,instance_merge,person,person,N4 Nguyễn Bảo Khánh,review/n4_khanh.csv
+000000008277,instance_merge,broccoli,broccoli,N1 Lê Ngọc Dũng,review/n1_dung.csv
+000000008844,instance_merge,banana,banana,N5 Nguyễn Xuân Anh,review/n5_xuananh.csv
+000000013923,instance_merge,chair,chair,N2 Bùi Quang Huy,review/n2_huy.csv
+000000017959,instance_merge,kite,kite,N3 Nguyễn Sỹ Kiên,review/n3_kien.csv
+000000019109,instance_merge,motorcycle,motorcycle,N4 Nguyễn Bảo Khánh,review/n4_khanh.csv
