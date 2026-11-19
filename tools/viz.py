@@ -24,6 +24,7 @@ import argparse
 import csv
 import html
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -133,6 +134,19 @@ def pick_focus(cand: dict, boxes: list[dict], segs: list[dict]):
         seg = max(f_segs, key=lambda s: (best_iou(s) < 0.2, s["area"]))
         return [], [seg], seg["box"]
 
+    if kind == "instance_merge" and f_segs and f_boxes:
+        # segment bị nghi gộp: ưu tiên segment có đúng diện tích ghi trong reason ("area=..."),
+        # nếu không có thì lấy segment chồng lên nhiều box cùng lớp nhất
+        m = re.search(r"area=(\d+)", str(cand.get("reason", "")))
+        exact = [s for s in f_segs if m and s["area"] == int(m.group(1))]
+        seg = exact[0] if exact else max(
+            f_segs, key=lambda s: (sum(iou(b["box"], s["box"]) > 0 for b in f_boxes), s["area"]))
+        def overlap(b):
+            a, s = b["box"], seg["box"]
+            return max(0.0, min(a[2], s[2]) - max(a[0], s[0])) * max(0.0, min(a[3], s[3]) - max(a[1], s[1]))
+        keep = sorted((b for b in f_boxes if overlap(b) > 0), key=overlap, reverse=True)[:2]
+        return keep, [seg], union_box([b["box"] for b in keep] + [seg["box"]])
+
     if f_boxes and f_segs:
         box, seg = max(((b, s) for b in f_boxes for s in f_segs), key=lambda p: iou(p[0]["box"], p[1]["box"]))
         if iou(box["box"], seg["box"]) > 0:
@@ -216,7 +230,7 @@ def tag(draw, xy, text, color, font):
     draw.text((x, y), text, fill=color, font=font)
 
 
-def render(dl: Delivery, name: str, cand: dict, out_dir: Path, fonts) -> Path | None:
+def render(dl: Delivery, name: str, cand: dict, out_dir: Path, fonts, out_name: str | None = None) -> Path | None:
     item = dl.manifest.get(name)
     if item is None or not (dl.root / item["image"]).is_file():
         print(f"  bỏ qua {name}: không có ảnh trong lô")
@@ -281,7 +295,7 @@ def render(dl: Delivery, name: str, cand: dict, out_dir: Path, fonts) -> Path | 
     sd.text((8, 52), "Đỏ = box detection · Xanh = viền panoptic · Cam/Tím = khớp ứng viên · Vàng = vùng phóng to · Xám = crowd",
             fill=(170, 170, 170), font=small)
 
-    out = out_dir / f"{name}.png"
+    out = out_dir / (out_name or f"{name}.png")
     sheet.save(out)
     return out
 
@@ -344,8 +358,13 @@ def main() -> int:
     fonts = (load_font(13), load_font(17))
 
     done = []
+    per_image = {}
+    for cand in jobs:
+        per_image[cand["image"]] = per_image.get(cand["image"], 0) + 1
     for i, cand in enumerate(jobs, 1):
-        path = render(dl, cand["image"], cand, out_dir, fonts)
+        # ảnh có nhiều dấu hiệu: mỗi dấu hiệu một file riêng, không ghi đè nhau
+        out_name = f"{cand['image']}_{cand.get('type', 'xem')}.png" if per_image[cand["image"]] > 1 else None
+        path = render(dl, cand["image"], cand, out_dir, fonts, out_name)
         if path:
             done.append((cand, path))
             print(f"[{i}/{len(jobs)}] {path.name}  ({cand.get('type', '')})")
