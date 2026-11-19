@@ -26,7 +26,7 @@ def main():
         (delivery / "manifest.json").read_text(encoding="utf-8")
     )
 
-    # Hiện mới nối hai kiểm tra file của N1; N2 sẽ bổ sung sau.
+    # Hiện nối bốn kiểm tra N1; duplicate_box và N2/N3 sẽ bổ sung sau.
     errors = check_detection(delivery)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -44,7 +44,8 @@ def main():
         )
 
     print(f"Đã đọc manifest: {len(manifest['items'])} mục")
-    print("Đã kiểm N1: missing_image và wrong_hash; các phần khác chưa nối.")
+    print("Đã kiểm N1: missing_image, wrong_hash, invalid_class, bbox_out_of_bounds.")
+    print("Chưa kiểm duplicate_box và chưa nối N2/N3.")
     print(f"Số phát hiện: {len(errors)}")
     print(f"Đã ghi: {args.out}")
 
