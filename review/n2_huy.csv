@@ -1,3 +1,7 @@
 image,type,verdict,note
 000000009483,category_swap,confirmed,"Huy: vật lớn là màn hình máy tính (COCO xếp monitor vào lớp tv), detection ghi tv đúng, panoptic ghi clock sai; 2 ô nhỏ giống màn hình CCTV, hai nguồn cùng ghi tv nên không tính"
 000000024027,class_swap,confirmed,"Huy: vật là cái diều đang bay, panoptic ghi kite đúng, detection ghi bird sai"
+000000002685,instance_merge,rejected,"Huy: xem ảnh thấy các người trong vùng nghi chồng lấn tự nhiên, không phải panoptic gộp nhầm hai người khác nhau vào một segment"
+000000013923,instance_merge,rejected,"Huy: xem ảnh thấy các ghế trong vùng nghi chồng lấn tự nhiên, không phải panoptic gộp nhầm hai cái ghế khác nhau vào một segment"
+000000015517,bbox_drift,rejected,"Huy: tán cây phía trước che một phần xe buýt nên mask bus bị khuyết, box detection vẫn bao đúng xe, không lệch"
+000000015517,instance_merge,rejected,"Huy: chỉ thấy xe buýt bị tán cây che cắt ngang, không có hai xe bus bị gộp; ảnh không có gì bất thường"

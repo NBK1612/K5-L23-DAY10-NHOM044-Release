@@ -2,3 +2,5 @@ image,type,verdict,note
 000000006723,class_swap,confirmed,"Lê Ngọc Dũng: Vật thể là xe buýt bus; detection gán nhầm truck, panoptic ghi đúng bus."
 000000020553,category_swap,confirmed,"Lê Ngọc Dũng: Vật thể là chai bottle; detection ghi đúng bottle, panoptic gán nhầm vase."
 000000025424,missing_box,confirmed,"Lê Ngọc Dũng: Có vợt tennis trong tay người chơi; panoptic đã đánh dấu nhưng detection thiếu box riêng cho vợt."
+000000001353,instance_merge,rejected,"Lê Ngọc Dũng: Vùng mask tím chỉ bao một người; không quan sát thấy hai người riêng biệt bị gộp vào cùng vùng mask."
+000000008277,instance_merge,rejected,"Lê Ngọc Dũng: Vùng mask tím chỉ bao một vật broccoli; không quan sát thấy hai vật riêng biệt bị gộp vào cùng vùng mask."
