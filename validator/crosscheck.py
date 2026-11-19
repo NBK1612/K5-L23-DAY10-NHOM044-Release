@@ -1,4 +1,4 @@
-"""Đối chiếu detection ↔ panoptic.
+"""Đối chiếu detection ↔ panoptic (Phần của N3).
 
 Pha 2.1:
   - Đổi box YOLO (chuẩn hoá 0–1) sang toạ độ pixel.
@@ -6,7 +6,14 @@ Pha 2.1:
   - Mỗi box ghép với segment thing có bbox gần nhất (IoU). Bỏ segment iscrowd.
   - Tính tỉ lệ pixel của segment nằm trong box detection.
 
-Đạt khi: Với cặp đúng, gần như 100% pixel của segment nằm trong box.
+Pha 2.2:
+  - Đánh dấu 4 loại dấu hiệu ứng viên lỗi gán nhãn:
+    + class_swap (hoặc category_swap): Box và segment trùng vị trí nhưng khác lớp.
+    + bbox_drift: Nhiều pixel của segment rơi ra ngoài box cùng lớp (box lệch).
+    + missing_box: Segment thing lớn không có box detection nào.
+    + instance_merge: Một segment phủ lên 2 box detection cùng lớp.
+  - Sinh candidates.json qua cờ --candidates.
+  - Loại trừ các ảnh đã có lỗi luật (để hàng đợi xem ảnh ngắn gọn).
 
 Chỉ đọc thư mục delivery; chỉ dùng thư viện chuẩn + scripts/pngutil.py.
 Không giả định tên ảnh cố định (dùng manifest.json làm cầu nối).
@@ -128,8 +135,6 @@ def compute_segment_pixel_ratio(
 
     # Tối ưu hoá nhanh: nếu detection box bao trọn toàn bộ seg_bbox
     if det_x1 <= sx and det_y1 <= sy and det_x2 >= sx + sw and det_y2 >= sy + sh:
-        # Toàn bộ pixel của segment chắc chắn nằm trọn trong detection box
-        # Đếm tổng pixel của segment trong bbox
         r = seg_id & 255
         g = (seg_id >> 8) & 255
         b = (seg_id >> 16) & 255
@@ -293,6 +298,150 @@ def match_image(
     }
 
 
+def find_candidates(delivery: Path, rule_errors: list[dict] | None = None) -> list[dict]:
+    """Pha 2.2: Sinh danh sách ứng viên nghi ngờ lỗi gán nhãn.
+
+    Bắt 4 loại dấu hiệu:
+      - class_swap (hoặc category_swap): Box và segment trùng vị trí (IoU >= 0.35) nhưng khác lớp.
+      - bbox_drift: Box và segment cùng lớp nhưng pixel_ratio < 0.70 (box bị lệch ra ngoài).
+      - missing_box: Segment thing đáng kể (area >= 1200 px, >= 0.8% ảnh) không có box detection.
+      - instance_merge: Một segment thing phủ lên 2 box detection riêng biệt cùng lớp.
+
+    Bỏ qua ảnh đã có lỗi luật (mỗi ảnh chỉ 1 lỗi).
+    """
+    delivery = Path(delivery).resolve()
+    manifest_path = delivery / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))["items"]
+
+    # Tập hợp các ảnh đã dính lỗi luật để loại trừ
+    rule_images = set()
+    if rule_errors:
+        for err in rule_errors:
+            if err.get("type") != "scene_leak":
+                rule_images.add(err.get("target"))
+
+    classes = load_classes(delivery)
+    cat_by_id, thing_category_ids, img_sizes, ann_by_mask_file = load_panoptic_data(delivery)
+
+    candidates = []
+
+    for image_name, item in sorted(manifest.items()):
+        # Bỏ qua nếu ảnh đã có lỗi luật
+        if image_name in rule_images:
+            continue
+
+        # Kiểm tra file tồn tại
+        if not (delivery / item["image"]).is_file():
+            continue
+        if not (delivery / item["label"]).is_file():
+            continue
+        if not (delivery / item["mask"]).is_file():
+            continue
+
+        res = match_image(
+            delivery=delivery,
+            image_name=image_name,
+            item=item,
+            classes=classes,
+            cat_by_id=cat_by_id,
+            thing_category_ids=thing_category_ids,
+            img_sizes=img_sizes,
+            ann_by_mask_file=ann_by_mask_file,
+        )
+
+        img_w, img_h = res["width"], res["height"]
+        img_area = img_w * img_h
+        img_candidates = []
+
+        # 1. Dấu hiệu class_swap / category_swap:
+        # Box và segment trùng vị trí nhưng khác lớp
+        for m in res["matches"]:
+            d = m["det_box"]
+            s = m["segment"]
+            if s and m["iou"] >= 0.35 and not m["same_class"]:
+                d_w = d["pixel_box"][2] - d["pixel_box"][0]
+                d_h = d["pixel_box"][3] - d["pixel_box"][1]
+                d_area = d_w * d_h
+                # Lọc nhiễu quá nhỏ
+                if (d_area / img_area >= 0.003) or (s["area"] >= 400):
+                    img_candidates.append({
+                        "image": image_name,
+                        "type": "class_swap",
+                        "class_det": d["class_name"],
+                        "class_pan": s["class_name"],
+                        "iou": round(m["iou"], 3),
+                        "pixel_ratio": round(m["pixel_ratio"], 3),
+                        "reason": f"Detection ghi [{d['class_name']}], Panoptic ghi [{s['class_name']}] (IoU={m['iou']:.2f})",
+                    })
+
+        # 2. Dấu hiệu bbox_drift:
+        # Cùng lớp nhưng tỉ lệ pixel trong box thấp (< 0.70)
+        for m in res["matches"]:
+            d = m["det_box"]
+            s = m["segment"]
+            if s and m["same_class"] and m["iou"] >= 0.05:
+                if m["pixel_ratio"] < 0.70 and s["area"] >= 600:
+                    img_candidates.append({
+                        "image": image_name,
+                        "type": "bbox_drift",
+                        "class_det": d["class_name"],
+                        "class_pan": s["class_name"],
+                        "iou": round(m["iou"], 3),
+                        "pixel_ratio": round(m["pixel_ratio"], 3),
+                        "reason": f"Box [{d['class_name']}] lệch khỏi segment: pixel_ratio={m['pixel_ratio']:.2f} ({m['pixel_inside']}/{m['pixel_total']} px)",
+                    })
+
+        # 3. Dấu hiệu missing_box:
+        # Segment thing lớn nhưng không có box detection nào bao quanh (IoU < 0.20)
+        matched_seg_ids = {m["segment"]["id"] for m in res["matches"] if m["segment"] and m["iou"] >= 0.20}
+        for s in res["thing_segments"]:
+            if s["id"] not in matched_seg_ids:
+                if s["area"] >= 1200 and (s["area"] / img_area >= 0.008):
+                    img_candidates.append({
+                        "image": image_name,
+                        "type": "missing_box",
+                        "class_det": None,
+                        "class_pan": s["class_name"],
+                        "iou": 0.0,
+                        "pixel_ratio": 0.0,
+                        "reason": f"Segment thing [{s['class_name']}] ({s['area']} px, {s['area']/img_area*100:.1f}% ảnh) không có box detection",
+                    })
+
+        # 4. Dấu hiệu instance_merge:
+        # Một segment phủ lên 2 box detection riêng biệt cùng lớp
+        seg_to_matches: dict[int, list[dict]] = {}
+        for m in res["matches"]:
+            if m["segment"]:
+                seg_to_matches.setdefault(m["segment"]["id"], []).append(m)
+
+        for sid, mlist in seg_to_matches.items():
+            if len(mlist) >= 2:
+                s = mlist[0]["segment"]
+                same_cls = [m for m in mlist if m["det_box"]["class_name"] == s["class_name"] and m["pixel_inside"] >= 250]
+                if len(same_cls) >= 2:
+                    b1 = same_cls[0]["det_box"]["pixel_box"]
+                    b2 = same_cls[1]["det_box"]["pixel_box"]
+                    if compute_box_iou(b1, b2) < 0.50:
+                        img_candidates.append({
+                            "image": image_name,
+                            "type": "instance_merge",
+                            "class_det": s["class_name"],
+                            "class_pan": s["class_name"],
+                            "iou": round(same_cls[0]["iou"], 3),
+                            "pixel_ratio": round(same_cls[0]["pixel_ratio"], 3),
+                            "reason": f"Segment [{s['class_name']}] phủ lên {len(same_cls)} box detection riêng biệt",
+                        })
+
+        # Nếu một ảnh có nhiều ứng viên, giữ ứng viên rõ nhất để danh sách gọn
+        if img_candidates:
+            # Ưu tiên: class_swap > bbox_drift > missing_box > instance_merge
+            type_prio = {"class_swap": 0, "bbox_drift": 1, "missing_box": 2, "instance_merge": 3}
+            img_candidates.sort(key=lambda c: type_prio.get(c["type"], 9))
+            candidates.append(img_candidates[0])
+
+    return candidates
+
+
 def crosscheck_all(delivery: Path) -> list[dict]:
     """Chạy đối chiếu trên toàn bộ ảnh trong delivery."""
     delivery = delivery.resolve()
@@ -304,7 +453,6 @@ def crosscheck_all(delivery: Path) -> list[dict]:
 
     results = []
     for image_name, item in sorted(manifest.items()):
-        # Bỏ qua nếu thiếu ảnh/nhãn/mask
         if not (delivery / item["image"]).is_file():
             continue
         if not (delivery / item["label"]).is_file():
@@ -328,9 +476,10 @@ def crosscheck_all(delivery: Path) -> list[dict]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Pha 2.1: Đối chiếu detection ↔ panoptic")
+    parser = argparse.ArgumentParser(description="Pha 2.1 & 2.2: Đối chiếu detection ↔ panoptic và sinh ứng viên")
     parser.add_argument("delivery", type=Path, help="Đường dẫn thư mục delivery")
     parser.add_argument("--image", type=str, default=None, help="Chỉ kiểm tra một ảnh cụ thể")
+    parser.add_argument("--candidates", type=Path, default=None, help="Xuất danh sách ứng viên ra JSON")
     args = parser.parse_args()
 
     delivery = args.delivery.resolve()
@@ -340,6 +489,18 @@ def main():
 
     print(f"Đã nạp {len(classes)} lớp detection từ classes.txt")
     print(f"Đã nạp {len(thing_category_ids)} lớp thing từ panoptic.json")
+
+    if args.candidates:
+        cands = find_candidates(delivery)
+        args.candidates.parent.mkdir(parents=True, exist_ok=True)
+        args.candidates.write_text(
+            json.dumps({"candidates": cands}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        print(f"Đã sinh {len(cands)} ứng viên vào {args.candidates}")
+        for c in cands:
+            print(f"  [{c['type']}] {c['image']}: {c['reason']}")
+        return
 
     targets = [args.image] if args.image else list(manifest.keys())[:5]
 
