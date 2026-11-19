@@ -1,0 +1,3 @@
+image,type,verdict,note
+000000003501,missing_box,confirmed,"Xuân Anh: chiếc bát tô sứ đựng cơm và súp lơ xanh rất rõ ràng, detection thiếu box bowl"
+000000013597,class_swap,confirmed,"Xuân Anh: miếng bánh ngọt sô-cô-la hình tam giác trên đĩa, detection ghi donut sai, panoptic cake đúng"
